@@ -61,7 +61,7 @@ const Tinyman_App_Id = {
 
 const Tinylock_App_Id = {
     TestNet: 47355461,
-    MainNet: 0
+    MainNet: 445602322
 }
 
 const Tinylock_Asa_Id = {
