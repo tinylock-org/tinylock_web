@@ -8,7 +8,7 @@ const tinylock_signature_1 = require("./tinylock_signature");
 const tinyman_signature_1 = require("./tinyman_signature");
 const constants_1 = require("./constants");
 class Tinylocker {
-    constructor(settings) {
+    constructor(settings = {}) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
         this.settings = settings;
         this.rateLimiter = {
@@ -95,8 +95,9 @@ class Tinylocker {
                         return (0, rxjs_1.of)(null);
                     }
                     const noteBuffer = buffer_1.Buffer.from(transaction.note, 'base64');
-                    if (noteBuffer.toString('utf-8').length == 58) {
-                        result.account = noteBuffer.toString('utf-8');
+                    const noteUTF8 = noteBuffer.toString('utf-8');
+                    if (noteUTF8.length == 58) {
+                        result.account = noteUTF8;
                         signatureAsa = asa;
                         result.migrated = true;
                     }
@@ -113,7 +114,7 @@ class Tinylocker {
                     if (asaSeen[asa]) {
                         if (asaSeen[asa].indexOf(result.account) >= 0) {
                             // console.log("Using already fetched information for asa: ", asa);
-                            return (0, rxjs_1.of)(result);
+                            return (0, rxjs_1.of)(null);
                         }
                         asaSeen[asa].push(result.account);
                     }
@@ -122,7 +123,7 @@ class Tinylocker {
                     }
                     return this.tinylockSignatureGenerator.sendToCompile(signatureAsa, this.tinylockAppId, this.tinylockAsaId, result.account)
                         .pipe((0, rxjs_1.mergeMap)((signature) => this.getAccountInfoByAddress(signature.address())), (0, rxjs_1.mergeMap)((signatureAccountInfo) => {
-                        console.log("Signature Acc: ", signatureAccountInfo);
+                        // console.log("Signature Acc: ", signatureAccountInfo);
                         const localStateArray = signatureAccountInfo["account"]["apps-local-state"];
                         const assets = signatureAccountInfo["account"]["assets"];
                         const amount = BigInt(assets[0]["amount"]);
@@ -147,6 +148,9 @@ class Tinylocker {
                             }
                             return (0, rxjs_1.of)(result);
                         }));
+                    }), (0, rxjs_1.catchError)((error) => {
+                        console.debug("Error: ", error.message, " Entry: ", result, " TX: ", transaction);
+                        return (0, rxjs_1.of)(null);
                     }));
                 }), (0, rxjs_1.filter)(value => value != null && Object.getOwnPropertyNames(value).length !== 0), (0, rxjs_1.toArray)());
             }));
