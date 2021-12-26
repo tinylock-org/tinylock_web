@@ -6,32 +6,7 @@ const buffer_1 = require("buffer");
 const rxjs_1 = require("rxjs");
 const tinylock_signature_1 = require("./tinylock_signature");
 const tinyman_signature_1 = require("./tinyman_signature");
-var Environment;
-(function (Environment) {
-    Environment["MainNet"] = "MainNet";
-    Environment["TestNet"] = "TestNet";
-})(Environment || (Environment = {}));
-const algoExplorerPort = 443;
-const algoExplorerClientUrl = {
-    TestNet: "https://testnet.algoexplorerapi.io/",
-    MainNet: "https://algoexplorerapi.io/"
-};
-const algoExplorerIndexerUrl = {
-    TestNet: algoExplorerClientUrl[Environment.TestNet] + "idx2",
-    MainNet: algoExplorerClientUrl[Environment.MainNet] + "idx2"
-};
-const Tinyman_App_Id = {
-    TestNet: 21580889,
-    MainNet: 350338509
-};
-const Tinylock_App_Id = {
-    TestNet: 47355461,
-    MainNet: 445602322
-};
-const Tinylock_Asa_Id = {
-    TestNet: 47355102,
-    MainNet: 410703201
-};
+const constants_1 = require("./constants");
 class Tinylocker {
     constructor(settings) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
@@ -80,6 +55,20 @@ class Tinylocker {
                 .assetID(this.tinylockAsaId)
                 .do()), (0, rxjs_1.switchMap)((result) => (0, rxjs_1.of)(result["transactions"])));
         };
+        this.findTinylockMigrationTransactions = (asa) => {
+            return this.getIndexer().pipe((0, rxjs_1.switchMap)(indexer => {
+                const request = indexer.searchForTransactions()
+                    .txType("axfer")
+                    .address(constants_1.migrationData[this.environment].sig_tmpl_v2_migration_account)
+                    .addressRole("sender")
+                    .minRound(constants_1.migrationData[this.environment].sig_tmpl_v2_migration_start)
+                    .maxRound(constants_1.migrationData[this.environment].sig_tmpl_v2_round);
+                if (asa) {
+                    request.assetID(asa);
+                }
+                return request.do();
+            }), (0, rxjs_1.switchMap)(result => (0, rxjs_1.of)(result["transactions"])));
+        };
         this.fetchAssetInfoById = (asaID) => this.getIndexer().pipe((0, rxjs_1.switchMap)(indexer => indexer.lookupAssetByID(asaID).do()));
         this.assets = {};
         this.getAssetInfoById = (asaId) => {
@@ -94,20 +83,33 @@ class Tinylocker {
                 : (0, rxjs_1.of)(asset))));
         };
         this.searchToken = (asa, issuedLiquidityTokens) => {
-            return this.findTinylockAppTransactions().pipe((0, rxjs_1.switchMap)((transactions) => {
+            return (0, rxjs_1.merge)(this.findTinylockMigrationTransactions(asa), this.findTinylockAppTransactions()).pipe((0, rxjs_1.switchMap)((transactions) => {
                 if (transactions.length == 0) {
                     return (0, rxjs_1.from)([]);
                 }
                 const asaSeen = {};
                 return (0, rxjs_1.from)(transactions).pipe((0, rxjs_1.mergeMap)((transaction) => {
                     const result = {};
-                    const noteBuffer = buffer_1.Buffer.from(transaction.note, 'base64');
-                    const noteNumber = Number(noteBuffer.toString('utf-8'));
-                    if (noteNumber !== asa) {
-                        // console.log("Transaction not what we are looking for", noteNumber);
-                        return (0, rxjs_1.of)(result);
+                    let signatureAsa = -1;
+                    if (!transaction.note) {
+                        return (0, rxjs_1.of)(null);
                     }
-                    result.account = transaction.sender;
+                    const noteBuffer = buffer_1.Buffer.from(transaction.note, 'base64');
+                    if (noteBuffer.toString('utf-8').length == 58) {
+                        result.account = noteBuffer.toString('utf-8');
+                        signatureAsa = asa;
+                        result.migrated = true;
+                    }
+                    else {
+                        const noteHex = noteBuffer.toString('hex');
+                        const noteNumber = parseInt(noteHex, 16);
+                        if (noteNumber !== asa) {
+                            // console.log("Transaction not what we are looking for", noteNumber);
+                            return (0, rxjs_1.of)(null);
+                        }
+                        signatureAsa = noteNumber;
+                        result.account = transaction.sender;
+                    }
                     if (asaSeen[asa]) {
                         if (asaSeen[asa].indexOf(result.account) >= 0) {
                             // console.log("Using already fetched information for asa: ", asa);
@@ -118,7 +120,7 @@ class Tinylocker {
                     else {
                         asaSeen[asa] = [result.account];
                     }
-                    return this.tinylockSignatureGenerator.sendToCompile(noteNumber, this.tinylockAppId, this.tinylockAsaId, result.account)
+                    return this.tinylockSignatureGenerator.sendToCompile(signatureAsa, this.tinylockAppId, this.tinylockAsaId, result.account)
                         .pipe((0, rxjs_1.mergeMap)((signature) => this.getAccountInfoByAddress(signature.address())), (0, rxjs_1.mergeMap)((signatureAccountInfo) => {
                         console.log("Signature Acc: ", signatureAccountInfo);
                         const localStateArray = signatureAccountInfo["account"]["apps-local-state"];
@@ -146,14 +148,14 @@ class Tinylocker {
                             return (0, rxjs_1.of)(result);
                         }));
                     }));
-                }), (0, rxjs_1.filter)(value => Object.getOwnPropertyNames(value).length !== 0), (0, rxjs_1.toArray)());
+                }), (0, rxjs_1.filter)(value => value != null && Object.getOwnPropertyNames(value).length !== 0), (0, rxjs_1.toArray)());
             }));
         };
         this.searchPoolAsa = (asa1, asa2) => {
             if (asa1 < asa2) {
                 let tmp = asa1;
                 asa1 = asa2;
-                asa2 = asa1;
+                asa2 = tmp;
             }
             const poolSignature = this.tinymanSignatureGenerator.getTinymanPoolSignatureAccount(asa1, asa2);
             return this.getAccountInfoByAddress(poolSignature.address()).pipe((0, rxjs_1.switchMap)((accountInfo) => {
@@ -173,13 +175,13 @@ class Tinylocker {
                 });
             }));
         };
-        this.environment = (_a = settings.environment) !== null && _a !== void 0 ? _a : Environment.MainNet;
-        this.tinymanAppId = (_b = settings.tinymanAppId) !== null && _b !== void 0 ? _b : Tinyman_App_Id[this.environment];
-        this.tinylockAppId = (_c = settings.tinylockAppId) !== null && _c !== void 0 ? _c : Tinylock_App_Id[this.environment];
+        this.environment = (_a = settings.environment) !== null && _a !== void 0 ? _a : constants_1.Environment.MainNet;
+        this.tinymanAppId = (_b = settings.tinymanAppId) !== null && _b !== void 0 ? _b : constants_1.Tinyman_App_Id[this.environment];
+        this.tinylockAppId = (_c = settings.tinylockAppId) !== null && _c !== void 0 ? _c : constants_1.Tinylock_App_Id[this.environment];
         this.enableAPICallRateLimit = (_d = settings.enableAPICallRateLimit) !== null && _d !== void 0 ? _d : true;
         this.tinymanSignatureGenerator = new tinyman_signature_1.Tinyman(this.tinymanAppId);
-        this.tinylockAsaId = Tinylock_Asa_Id[this.environment];
-        this.tinylockSignatureGenerator = new tinylock_signature_1.Tinylock(this);
+        this.tinylockAsaId = constants_1.Tinylock_Asa_Id[this.environment];
+        this.tinylockSignatureGenerator = new tinylock_signature_1.Tinylock(this, this.environment);
         if (settings.maxCallsPerSecond) {
             this.rateLimiter.maxCallsPerSecond = settings.maxCallsPerSecond;
             this.rateLimiter.maxCallsDelay = 1000 / this.rateLimiter.maxCallsPerSecond;
@@ -188,13 +190,13 @@ class Tinylocker {
             this.client = settings.client;
         }
         else {
-            this.client = new algosdk_1.Algodv2((_e = settings.clientToken) !== null && _e !== void 0 ? _e : '', (_f = settings.clientBase) !== null && _f !== void 0 ? _f : algoExplorerClientUrl[this.environment], (_g = settings.clientPort) !== null && _g !== void 0 ? _g : algoExplorerPort);
+            this.client = new algosdk_1.Algodv2((_e = settings.clientToken) !== null && _e !== void 0 ? _e : '', (_f = settings.clientBase) !== null && _f !== void 0 ? _f : constants_1.algoExplorerClientUrl[this.environment], (_g = settings.clientPort) !== null && _g !== void 0 ? _g : constants_1.algoExplorerPort);
         }
         if (settings.indexer) {
             this.indexer = settings.indexer;
         }
         else {
-            this.indexer = new algosdk_1.Indexer((_h = settings.indexerToken) !== null && _h !== void 0 ? _h : '', (_j = settings.indexerBase) !== null && _j !== void 0 ? _j : algoExplorerIndexerUrl[this.environment], (_k = settings.indexerPort) !== null && _k !== void 0 ? _k : algoExplorerPort);
+            this.indexer = new algosdk_1.Indexer((_h = settings.indexerToken) !== null && _h !== void 0 ? _h : '', (_j = settings.indexerBase) !== null && _j !== void 0 ? _j : constants_1.algoExplorerIndexerUrl[this.environment], (_k = settings.indexerPort) !== null && _k !== void 0 ? _k : constants_1.algoExplorerPort);
         }
     }
 }

@@ -3,6 +3,7 @@ import { AlgodTokenHeader, CustomTokenHeader, IndexerTokenHeader } from "algosdk
 import { Asset } from "algosdk/dist/types/src/client/v2/algod/models/types";
 import { Tinylock } from "./tinylock_signature";
 import { Tinyman } from "./tinyman_signature";
+import { Environment } from "./constants";
 export interface TinylockerConfig {
     enableAPICallRateLimit?: boolean;
     maxCallsPerSecond?: number;
@@ -25,15 +26,12 @@ export interface SearchResultEntry {
     date: string;
     amount: number;
     account: string;
+    migrated?: boolean;
 }
 export interface PoolData {
     poolAccount: any;
     poolAsaId: number;
     issuedLiquidityTokens: BigInt;
-}
-declare enum Environment {
-    MainNet = "MainNet",
-    TestNet = "TestNet"
 }
 export declare class Tinylocker {
     private readonly settings;
@@ -55,22 +53,22 @@ export declare class Tinylocker {
     tinymanSignatureGenerator: Tinyman;
     tinylockSignatureGenerator: Tinylock;
     textDecoder: TextDecoder;
-    constructor(settings: TinylockerConfig);
+    constructor(settings?: TinylockerConfig);
     private requestLimiter;
     getClient: () => import("rxjs").Observable<Algodv2>;
     getIndexer: () => import("rxjs").Observable<Indexer>;
     getAccountInfoByAddress: (address: string) => import("rxjs").Observable<Record<string, any>>;
     private findTinylockAppTransactions;
+    private findTinylockMigrationTransactions;
     fetchAssetInfoById: (asaID: number) => import("rxjs").Observable<Record<string, any>>;
     assets: {
         [key: number]: Asset;
     };
     getAssetInfoById: (asaId: number) => import("rxjs").Observable<Asset>;
-    searchToken: (asa: number, issuedLiquidityTokens?: bigint | undefined) => import("rxjs").Observable<SearchResultEntry[]>;
+    searchToken: (asa: number, issuedLiquidityTokens?: bigint | undefined) => import("rxjs").Observable<(SearchResultEntry | null)[]>;
     searchPoolAsa: (asa1: number, asa2: number) => import("rxjs").Observable<{
         poolAccount: any;
         poolAsaId: number;
         issuedLiquidityTokens: bigint;
     }>;
 }
-export {};

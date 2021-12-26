@@ -1,10 +1,11 @@
-import { Algodv2, Indexer, getApplicationAddress, LogicSigAccount} from "algosdk";
+import { Algodv2, Indexer, getApplicationAddress, LogicSigAccount } from "algosdk";
 import { AlgodTokenHeader, CustomTokenHeader, IndexerTokenHeader } from "algosdk/dist/types/src/client/client";
 import { Buffer } from "buffer";
-import { defer, delay, from, mergeMap, of, switchMap, toArray, filter } from "rxjs";
+import { defer, delay, from, mergeMap, of, switchMap, toArray, filter, merge, catchError } from "rxjs";
 import { Asset } from "algosdk/dist/types/src/client/v2/algod/models/types";
 import { Tinylock } from "./tinylock_signature";
 import { Tinyman } from "./tinyman_signature";
+import { algoExplorerClientUrl, algoExplorerIndexerUrl, algoExplorerPort, Environment, migrationData, Tinylock_App_Id, Tinylock_Asa_Id, Tinyman_App_Id } from "./constants";
 
 export interface TinylockerConfig {
     enableAPICallRateLimit?: boolean;
@@ -29,44 +30,13 @@ export interface SearchResultEntry {
     date: string;
     amount: number;
     account: string;
+    migrated?: boolean;
 }
 
 export interface PoolData {
     poolAccount: any;
     poolAsaId: number;
     issuedLiquidityTokens: BigInt;
-}
-
-enum Environment {
-    MainNet = "MainNet",
-    TestNet = "TestNet"
-}
-
-const algoExplorerPort = 443;
-
-const algoExplorerClientUrl = {
-    TestNet: "https://testnet.algoexplorerapi.io/",
-    MainNet: "https://algoexplorerapi.io/"
-}
-
-const algoExplorerIndexerUrl = {
-    TestNet: algoExplorerClientUrl[Environment.TestNet] + "idx2",
-    MainNet: algoExplorerClientUrl[Environment.MainNet] + "idx2"
-};
-
-const Tinyman_App_Id = {
-    TestNet: 21580889,
-    MainNet: 350338509
-}
-
-const Tinylock_App_Id = {
-    TestNet: 47355461,
-    MainNet: 445602322
-}
-
-const Tinylock_Asa_Id = {
-    TestNet: 47355102,
-    MainNet: 410703201
 }
 
 export class Tinylocker {
@@ -96,7 +66,7 @@ export class Tinylocker {
     textDecoder = new TextDecoder();
 
     constructor(
-        private readonly settings: TinylockerConfig
+        private readonly settings = {} as TinylockerConfig
     ) {
         this.environment = settings.environment ?? Environment.MainNet as any;
         this.tinymanAppId = settings.tinymanAppId ?? Tinyman_App_Id[this.environment];
@@ -104,9 +74,9 @@ export class Tinylocker {
         this.enableAPICallRateLimit = settings.enableAPICallRateLimit ?? true;
         this.tinymanSignatureGenerator = new Tinyman(this.tinymanAppId);
         this.tinylockAsaId = Tinylock_Asa_Id[this.environment];
-        this.tinylockSignatureGenerator = new Tinylock(this);
+        this.tinylockSignatureGenerator = new Tinylock(this, this.environment);
 
-        if(settings.maxCallsPerSecond){
+        if (settings.maxCallsPerSecond) {
             this.rateLimiter.maxCallsPerSecond = settings.maxCallsPerSecond;
             this.rateLimiter.maxCallsDelay = 1000 / this.rateLimiter.maxCallsPerSecond;
         }
@@ -192,6 +162,30 @@ export class Tinylocker {
         )
     }
 
+    private findTinylockMigrationTransactions = (asa?: number) => {
+        return this.getIndexer().pipe(
+            switchMap(
+                indexer => {
+                    const request = indexer.searchForTransactions()
+                        .txType("axfer")
+                        .address(migrationData[this.environment].sig_tmpl_v2_migration_account)
+                        .addressRole("sender")
+                        .minRound(migrationData[this.environment].sig_tmpl_v2_migration_start)
+                        .maxRound(migrationData[this.environment].sig_tmpl_v2_round)
+
+                    if (asa) {
+                        request.assetID(asa)
+                    }
+
+                    return request.do()
+                }
+            ),
+            switchMap(
+                result => of(result["transactions"])
+            )
+        )
+    }
+
     public fetchAssetInfoById = (asaID: number) =>
         this.getIndexer().pipe(
             switchMap(
@@ -226,7 +220,10 @@ export class Tinylocker {
 
     public searchToken = (asa: number, issuedLiquidityTokens?: bigint) => {
 
-        return this.findTinylockAppTransactions().pipe(
+        return merge(
+            this.findTinylockMigrationTransactions(asa),
+            this.findTinylockAppTransactions()
+        ).pipe(
             switchMap(
                 (transactions: any[]) => {
                     if (transactions.length == 0) {
@@ -242,20 +239,35 @@ export class Tinylocker {
                             (transaction: any) => {
                                 const result = {} as SearchResultEntry;
 
-                                const noteBuffer = Buffer.from(transaction.note, 'base64');
-                                const noteNumber = Number(noteBuffer.toString('utf-8'));
+                                let signatureAsa = -1;
 
-                                if (noteNumber !== asa) {
-                                    // console.log("Transaction not what we are looking for", noteNumber);
-                                    return of(result);
+                                if (!transaction.note) {
+                                    return of(null);
                                 }
 
-                                result.account = transaction.sender;
+                                const noteBuffer = Buffer.from(transaction.note, 'base64');
+                                const noteUTF8 = noteBuffer.toString('utf-8');
+                                if (noteUTF8.length == 58) {
+                                    result.account = noteUTF8;
+                                    signatureAsa = asa;
+                                    result.migrated = true;
+
+                                } else {
+                                    const noteHex = noteBuffer.toString('hex');
+                                    const noteNumber = parseInt(noteHex, 16);
+
+                                    if (noteNumber !== asa) {
+                                        // console.log("Transaction not what we are looking for", noteNumber);
+                                        return of(null);
+                                    }
+                                    signatureAsa = noteNumber;
+                                    result.account = transaction.sender;
+                                }
 
                                 if (asaSeen[asa]) {
                                     if (asaSeen[asa].indexOf(result.account) >= 0) {
                                         // console.log("Using already fetched information for asa: ", asa);
-                                        return of(result);
+                                        return of(null);
                                     }
                                     asaSeen[asa].push(result.account);
 
@@ -264,7 +276,7 @@ export class Tinylocker {
                                 }
 
                                 return this.tinylockSignatureGenerator.sendToCompile(
-                                    noteNumber,
+                                    signatureAsa,
                                     this.tinylockAppId,
                                     this.tinylockAsaId,
                                     result.account
@@ -275,7 +287,7 @@ export class Tinylocker {
                                         ),
                                         mergeMap(
                                             (signatureAccountInfo: any) => {
-                                                console.log("Signature Acc: ", signatureAccountInfo);
+                                                // console.log("Signature Acc: ", signatureAccountInfo);
 
                                                 const localStateArray = signatureAccountInfo["account"]["apps-local-state"];
                                                 const assets = signatureAccountInfo["account"]["assets"];
@@ -314,11 +326,17 @@ export class Tinylocker {
 
                                                 );
                                             }
+                                        ),
+                                        catchError(
+                                          (error: any) => {
+                                            console.debug("Error: ", error.message, " Entry: ", result, " TX: ", transaction);
+                                            return of(null);
+                                          }
                                         )
                                     )
                             }
                         ),
-                        filter(value => Object.getOwnPropertyNames(value).length !== 0),
+                        filter(value => value != null && Object.getOwnPropertyNames(value).length !== 0 ),
                         toArray()
                     )
                 }
@@ -331,7 +349,7 @@ export class Tinylocker {
         if (asa1 < asa2) {
             let tmp = asa1;
             asa1 = asa2;
-            asa2 = asa1;
+            asa2 = tmp;
         }
 
         const poolSignature = this.tinymanSignatureGenerator.getTinymanPoolSignatureAccount(

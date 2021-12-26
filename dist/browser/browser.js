@@ -72066,6 +72066,55 @@ function simpleEnd(buf) {
 
 /***/ }),
 
+/***/ 5601:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.migrationData = exports.algoExplorerIndexerUrl = exports.algoExplorerClientUrl = exports.algoExplorerPort = exports.Tinylock_Asa_Id = exports.Tinylock_App_Id = exports.Tinyman_App_Id = exports.Environment = void 0;
+var Environment;
+(function (Environment) {
+    Environment["MainNet"] = "MainNet";
+    Environment["TestNet"] = "TestNet";
+})(Environment = exports.Environment || (exports.Environment = {}));
+exports.Tinyman_App_Id = {
+    TestNet: 21580889,
+    MainNet: 350338509
+};
+exports.Tinylock_App_Id = {
+    TestNet: 47355461,
+    MainNet: 445602322
+};
+exports.Tinylock_Asa_Id = {
+    TestNet: 47355102,
+    MainNet: 410703201
+};
+exports.algoExplorerPort = 443;
+exports.algoExplorerClientUrl = {
+    TestNet: "https://testnet.algoexplorerapi.io/",
+    MainNet: "https://algoexplorerapi.io/"
+};
+exports.algoExplorerIndexerUrl = {
+    [Environment.TestNet]: exports.algoExplorerClientUrl[Environment.TestNet] + "idx2",
+    [Environment.MainNet]: exports.algoExplorerClientUrl[Environment.MainNet] + "idx2"
+};
+exports.migrationData = {
+    [Environment.MainNet]: {
+        sig_tmpl_v2_round: 18251708,
+        sig_tmpl_v2_migration_account: "Z7DECPOTVR7WEAB47CFYEHTKAROVHX7QBYJCBDRVA5CC4JBKSFXBKQTERE",
+        sig_tmpl_v2_migration_start: 18218596
+    },
+    [Environment.TestNet]: {
+        sig_tmpl_v2_round: 18742362,
+        sig_tmpl_v2_migration_account: "KS5USHCHOWT35KFCYXK3MF7M4WCEBUWCW6FHW7UJZ5HXHNHYORBVXN5CVA",
+        sig_tmpl_v2_migration_start: 18701971
+    }
+};
+
+
+/***/ }),
+
 /***/ 2812:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -72076,44 +72125,15 @@ exports.Tinylock = void 0;
 const algosdk_1 = __webpack_require__(4050);
 const buffer_1 = __webpack_require__(8764);
 const rxjs_1 = __webpack_require__(7652);
-const CONTRACT_BASE64 = `
-I3ByYWdtYSB2ZXJzaW9uIDUKZ2xvYmFsIEdyb3VwU2l6ZQppbnQgNQo9PQpibnogbWFpbl9sOQpn
-bG9iYWwgR3JvdXBTaXplCmludCAzCj09CmJueiBtYWluX2w2Cmdsb2JhbCBHcm91cFNpemUKaW50
-IDQKPT0KYnogbWFpbl9sMTIKZ3R4biAwIEFtb3VudAppbnQgMAo+Cmd0eG4gMCBSZWNlaXZlcgp0
-eG4gU2VuZGVyCj09CiYmCmd0eG4gMCBTZW5kZXIKdHhuIFNlbmRlcgohPQomJgpndHhuIDMgVHlw
-ZUVudW0KaW50IGFwcGwKPT0KZ3R4biAzIEFwcGxpY2F0aW9uSUQKaW50IFRNUExfQ09OVFJBQ1Rf
-SUQKPT0KJiYKZ3R4biAzIFNlbmRlcgp0eG4gU2VuZGVyCj09CiYmCmd0eG5hIDMgQXBwbGljYXRp
-b25BcmdzIDAKYnl0ZSAicmVsb2NrIgo9PQomJgomJgpndHhuIDIgVHlwZUVudW0KaW50IGF4ZmVy
-Cj09Cmd0eG4gMiBTZW5kZXIKdHhuIFNlbmRlcgohPQomJgpndHhuIDIgQXNzZXRSZWNlaXZlcgp0
-eG4gU2VuZGVyCj09CiYmCmd0eG4gMiBBc3NldEFtb3VudAppbnQgMAo+CiYmCmd0eG4gMiBYZmVy
-QXNzZXQKaW50IFRNUExfQVNTRVRfSUQKPT0KJiYKJiYKYm56IG1haW5fbDUKZXJyCm1haW5fbDU6
-CmludCAxCnJldHVybgptYWluX2w2OgpndHhuIDAgQW1vdW50CmludCAwCj4KZ3R4biAwIFJlY2Vp
-dmVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4biAwIFNlbmRlcgp0eG4gU2VuZGVyCiE9CiYmCmd0eG4g
-MSBUeXBlRW51bQppbnQgYXBwbAo9PQpndHhuIDEgQXBwbGljYXRpb25JRAppbnQgVE1QTF9DT05U
-UkFDVF9JRAo9PQomJgpndHhuIDEgU2VuZGVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4bmEgMSBBcHBs
-aWNhdGlvbkFyZ3MgMApieXRlICJ1bmxvY2siCj09CiYmCiYmCmd0eG4gMiBUeXBlRW51bQppbnQg
-YXhmZXIKPT0KZ3R4biAyIFNlbmRlcgp0eG4gU2VuZGVyCj09CiYmCmd0eG4gMiBBc3NldFJlY2Vp
-dmVyCmFkZHIgVE1QTF9MT0NLRVJfQUREUkVTUwo9PQomJgpndHhuIDIgWGZlckFzc2V0CmludCBU
-TVBMX0FTU0VUX0lECj09CiYmCiYmCmJueiBtYWluX2w4CmVycgptYWluX2w4OgppbnQgMQpyZXR1
-cm4KbWFpbl9sOToKZ3R4biAwIEFtb3VudAppbnQgMjAwMAo+PQpndHhuIDAgUmVjZWl2ZXIKdHhu
-IFNlbmRlcgo9PQomJgpndHhuIDAgU2VuZGVyCnR4biBTZW5kZXIKIT0KJiYKZ3R4biAxIFR5cGVF
-bnVtCmludCBheGZlcgo9PQpndHhuIDEgU2VuZGVyCnR4biBTZW5kZXIKIT0KJiYKZ3R4biAxIEFz
-c2V0QW1vdW50CmludCAwCj4KJiYKZ3R4biAxIFhmZXJBc3NldAppbnQgVE1QTF9GRUVUT0tFTl9J
-RAo9PQomJgomJgpndHhuIDIgVHlwZUVudW0KaW50IGFwcGwKPT0KZ3R4biAyIEFwcGxpY2F0aW9u
-SUQKaW50IFRNUExfQ09OVFJBQ1RfSUQKPT0KJiYKZ3R4biAyIFNlbmRlcgp0eG4gU2VuZGVyCj09
-CiYmCmd0eG5hIDIgQXBwbGljYXRpb25BcmdzIDAKYnl0ZSAibG9jayIKPT0KJiYKZ3R4bmEgMiBB
-c3NldHMgMAppbnQgVE1QTF9GRUVUT0tFTl9JRAo9PQomJgomJgpndHhuIDMgVHlwZUVudW0KaW50
-IGF4ZmVyCj09Cmd0eG4gMyBTZW5kZXIKdHhuIFNlbmRlcgo9PQomJgpndHhuIDMgQXNzZXRSZWNl
-aXZlcgp0eG4gU2VuZGVyCj09CiYmCmd0eG4gMyBBbW91bnQKaW50IDAKPT0KJiYKZ3R4biAzIFhm
-ZXJBc3NldAppbnQgVE1QTF9BU1NFVF9JRAo9PQomJgomJgpndHhuIDQgVHlwZUVudW0KaW50IGF4
-ZmVyCj09Cmd0eG4gNCBTZW5kZXIKdHhuIFNlbmRlcgohPQomJgpndHhuIDQgQXNzZXRSZWNlaXZl
-cgp0eG4gU2VuZGVyCj09CiYmCmd0eG4gNCBBc3NldEFtb3VudAppbnQgMAo+CiYmCmd0eG4gNCBY
-ZmVyQXNzZXQKaW50IFRNUExfQVNTRVRfSUQKPT0KJiYKJiYKYm56IG1haW5fbDExCmVycgptYWlu
-X2wxMToKaW50IDEKcmV0dXJuCm1haW5fbDEyOgppbnQgMApyZXR1cm4=
-`;
+const constants_1 = __webpack_require__(5601);
+const CONTRACT_BASES = {
+    [constants_1.Environment.MainNet]: "I3ByYWdtYSB2ZXJzaW9uIDUKZ2xvYmFsIEdyb3VwU2l6ZQppbnQgNQo9PQpibnogbWFpbl9sOQpnbG9iYWwgR3JvdXBTaXplCmludCAzCj09CmJueiBtYWluX2w2Cmdsb2JhbCBHcm91cFNpemUKaW50IDQKPT0KYnogbWFpbl9sMTIKZ3R4biAwIEFtb3VudAppbnQgMAo+Cmd0eG4gMCBSZWNlaXZlcgp0eG4gU2VuZGVyCj09CiYmCmd0eG4gMCBTZW5kZXIKYWRkciBUTVBMX0xPQ0tFUl9BRERSRVNTCj09CiYmCmd0eG4gMyBUeXBlRW51bQppbnQgYXBwbAo9PQpndHhuIDMgQXBwbGljYXRpb25JRAppbnQgVE1QTF9DT05UUkFDVF9JRAo9PQomJgpndHhuIDMgU2VuZGVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4bmEgMyBBcHBsaWNhdGlvbkFyZ3MgMApieXRlICJyZWxvY2siCj09CiYmCmd0eG4gMyBSZWtleVRvCmdsb2JhbCBaZXJvQWRkcmVzcwo9PQomJgomJgpndHhuIDIgVHlwZUVudW0KaW50IGF4ZmVyCj09Cmd0eG4gMiBTZW5kZXIKYWRkciBUTVBMX0xPQ0tFUl9BRERSRVNTCj09CiYmCmd0eG4gMiBBc3NldFJlY2VpdmVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4biAyIEFzc2V0QW1vdW50CmludCAwCj4KJiYKZ3R4biAyIFhmZXJBc3NldAppbnQgVE1QTF9BU1NFVF9JRAo9PQomJgomJgpibnogbWFpbl9sNQplcnIKbWFpbl9sNToKaW50IDEKcmV0dXJuCm1haW5fbDY6Cmd0eG4gMCBBbW91bnQKaW50IDAKPgpndHhuIDAgUmVjZWl2ZXIKdHhuIFNlbmRlcgo9PQomJgpndHhuIDAgU2VuZGVyCmFkZHIgVE1QTF9MT0NLRVJfQUREUkVTUwo9PQomJgpndHhuIDEgVHlwZUVudW0KaW50IGFwcGwKPT0KZ3R4biAxIEFwcGxpY2F0aW9uSUQKaW50IFRNUExfQ09OVFJBQ1RfSUQKPT0KJiYKZ3R4biAxIFNlbmRlcgp0eG4gU2VuZGVyCj09CiYmCmd0eG5hIDEgQXBwbGljYXRpb25BcmdzIDAKYnl0ZSAidW5sb2NrIgo9PQomJgpndHhuIDEgUmVrZXlUbwpnbG9iYWwgWmVyb0FkZHJlc3MKPT0KJiYKJiYKZ3R4biAyIFR5cGVFbnVtCmludCBheGZlcgo9PQpndHhuIDIgU2VuZGVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4biAyIEFzc2V0UmVjZWl2ZXIKYWRkciBUTVBMX0xPQ0tFUl9BRERSRVNTCj09CiYmCmd0eG4gMiBYZmVyQXNzZXQKaW50IFRNUExfQVNTRVRfSUQKPT0KJiYKZ3R4biAyIEFzc2V0Q2xvc2VUbwpnbG9iYWwgWmVyb0FkZHJlc3MKPT0KJiYKZ3R4biAyIFJla2V5VG8KZ2xvYmFsIFplcm9BZGRyZXNzCj09CiYmCiYmCmJueiBtYWluX2w4CmVycgptYWluX2w4OgppbnQgMQpyZXR1cm4KbWFpbl9sOToKZ3R4biAwIEFtb3VudAppbnQgMjAwMAo+PQpndHhuIDAgUmVjZWl2ZXIKdHhuIFNlbmRlcgo9PQomJgpndHhuIDAgU2VuZGVyCmFkZHIgVE1QTF9MT0NLRVJfQUREUkVTUwo9PQpndHhuIDAgU2VuZGVyCmFkZHIgWjdERUNQT1RWUjdXRUFCNDdDRllFSFRLQVJPVkhYN1FCWUpDQkRSVkE1Q0M0SkJLU0ZYQktRVEVSRQo9PQp8fAomJgpndHhuIDEgVHlwZUVudW0KaW50IGF4ZmVyCj09Cmd0eG4gMSBTZW5kZXIKdHhuIFNlbmRlcgohPQomJgpndHhuIDEgQXNzZXRBbW91bnQKaW50IDAKPgomJgpndHhuIDEgWGZlckFzc2V0CmludCBUTVBMX0ZFRVRPS0VOX0lECj09CiYmCiYmCmd0eG4gMiBUeXBlRW51bQppbnQgYXBwbAo9PQpndHhuIDIgQXBwbGljYXRpb25JRAppbnQgVE1QTF9DT05UUkFDVF9JRAo9PQomJgpndHhuIDIgU2VuZGVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4bmEgMiBBcHBsaWNhdGlvbkFyZ3MgMApieXRlICJsb2NrIgo9PQomJgpndHhuYSAyIEFzc2V0cyAwCmludCBUTVBMX0ZFRVRPS0VOX0lECj09CiYmCmd0eG4gMiBSZWtleVRvCmdsb2JhbCBaZXJvQWRkcmVzcwo9PQomJgomJgpndHhuIDMgVHlwZUVudW0KaW50IGF4ZmVyCj09Cmd0eG4gMyBTZW5kZXIKdHhuIFNlbmRlcgo9PQomJgpndHhuIDMgQXNzZXRSZWNlaXZlcgp0eG4gU2VuZGVyCj09CiYmCmd0eG4gMyBBbW91bnQKaW50IDAKPT0KJiYKZ3R4biAzIFhmZXJBc3NldAppbnQgVE1QTF9BU1NFVF9JRAo9PQomJgpndHhuIDMgUmVrZXlUbwpnbG9iYWwgWmVyb0FkZHJlc3MKPT0KJiYKJiYKZ3R4biA0IFR5cGVFbnVtCmludCBheGZlcgo9PQpndHhuIDQgU2VuZGVyCnR4biBTZW5kZXIKIT0KJiYKZ3R4biA0IEFzc2V0UmVjZWl2ZXIKdHhuIFNlbmRlcgo9PQomJgpndHhuIDQgQXNzZXRBbW91bnQKaW50IDAKPgomJgpndHhuIDQgWGZlckFzc2V0CmludCBUTVBMX0FTU0VUX0lECj09CiYmCmd0eG4gNCBBc3NldENsb3NlVG8KZ2xvYmFsIFplcm9BZGRyZXNzCj09CiYmCmd0eG4gNCBSZWtleVRvCmdsb2JhbCBaZXJvQWRkcmVzcwo9PQomJgomJgpibnogbWFpbl9sMTEKZXJyCm1haW5fbDExOgppbnQgMQpyZXR1cm4KbWFpbl9sMTI6CmludCAwCnJldHVybg==",
+    [constants_1.Environment.TestNet]: "I3ByYWdtYSB2ZXJzaW9uIDUKZ2xvYmFsIEdyb3VwU2l6ZQppbnQgNQo9PQpibnogbWFpbl9sOQpnbG9iYWwgR3JvdXBTaXplCmludCAzCj09CmJueiBtYWluX2w2Cmdsb2JhbCBHcm91cFNpemUKaW50IDQKPT0KYnogbWFpbl9sMTIKZ3R4biAwIEFtb3VudAppbnQgMAo+Cmd0eG4gMCBSZWNlaXZlcgp0eG4gU2VuZGVyCj09CiYmCmd0eG4gMCBTZW5kZXIKYWRkciBUTVBMX0xPQ0tFUl9BRERSRVNTCj09CiYmCmd0eG4gMyBUeXBlRW51bQppbnQgYXBwbAo9PQpndHhuIDMgQXBwbGljYXRpb25JRAppbnQgVE1QTF9DT05UUkFDVF9JRAo9PQomJgpndHhuIDMgU2VuZGVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4bmEgMyBBcHBsaWNhdGlvbkFyZ3MgMApieXRlICJyZWxvY2siCj09CiYmCmd0eG4gMyBSZWtleVRvCmdsb2JhbCBaZXJvQWRkcmVzcwo9PQomJgomJgpndHhuIDIgVHlwZUVudW0KaW50IGF4ZmVyCj09Cmd0eG4gMiBTZW5kZXIKYWRkciBUTVBMX0xPQ0tFUl9BRERSRVNTCj09CiYmCmd0eG4gMiBBc3NldFJlY2VpdmVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4biAyIEFzc2V0QW1vdW50CmludCAwCj4KJiYKZ3R4biAyIFhmZXJBc3NldAppbnQgVE1QTF9BU1NFVF9JRAo9PQomJgomJgpibnogbWFpbl9sNQplcnIKbWFpbl9sNToKaW50IDEKcmV0dXJuCm1haW5fbDY6Cmd0eG4gMCBBbW91bnQKaW50IDAKPgpndHhuIDAgUmVjZWl2ZXIKdHhuIFNlbmRlcgo9PQomJgpndHhuIDAgU2VuZGVyCmFkZHIgVE1QTF9MT0NLRVJfQUREUkVTUwo9PQomJgpndHhuIDEgVHlwZUVudW0KaW50IGFwcGwKPT0KZ3R4biAxIEFwcGxpY2F0aW9uSUQKaW50IFRNUExfQ09OVFJBQ1RfSUQKPT0KJiYKZ3R4biAxIFNlbmRlcgp0eG4gU2VuZGVyCj09CiYmCmd0eG5hIDEgQXBwbGljYXRpb25BcmdzIDAKYnl0ZSAidW5sb2NrIgo9PQomJgpndHhuIDEgUmVrZXlUbwpnbG9iYWwgWmVyb0FkZHJlc3MKPT0KJiYKJiYKZ3R4biAyIFR5cGVFbnVtCmludCBheGZlcgo9PQpndHhuIDIgU2VuZGVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4biAyIEFzc2V0UmVjZWl2ZXIKYWRkciBUTVBMX0xPQ0tFUl9BRERSRVNTCj09CiYmCmd0eG4gMiBYZmVyQXNzZXQKaW50IFRNUExfQVNTRVRfSUQKPT0KJiYKZ3R4biAyIEFzc2V0Q2xvc2VUbwpnbG9iYWwgWmVyb0FkZHJlc3MKPT0KJiYKZ3R4biAyIFJla2V5VG8KZ2xvYmFsIFplcm9BZGRyZXNzCj09CiYmCiYmCmJueiBtYWluX2w4CmVycgptYWluX2w4OgppbnQgMQpyZXR1cm4KbWFpbl9sOToKZ3R4biAwIEFtb3VudAppbnQgMjAwMAo+PQpndHhuIDAgUmVjZWl2ZXIKdHhuIFNlbmRlcgo9PQomJgpndHhuIDAgU2VuZGVyCmFkZHIgVE1QTF9MT0NLRVJfQUREUkVTUwo9PQpndHhuIDAgU2VuZGVyCmFkZHIgS1M1VVNIQ0hPV1QzNUtGQ1lYSzNNRjdNNFdDRUJVV0NXNkZIVzdVSlo1SFhITkhZT1JCVlhONUNWQQo9PQp8fAomJgpndHhuIDEgVHlwZUVudW0KaW50IGF4ZmVyCj09Cmd0eG4gMSBTZW5kZXIKdHhuIFNlbmRlcgohPQomJgpndHhuIDEgQXNzZXRBbW91bnQKaW50IDAKPgomJgpndHhuIDEgWGZlckFzc2V0CmludCBUTVBMX0ZFRVRPS0VOX0lECj09CiYmCiYmCmd0eG4gMiBUeXBlRW51bQppbnQgYXBwbAo9PQpndHhuIDIgQXBwbGljYXRpb25JRAppbnQgVE1QTF9DT05UUkFDVF9JRAo9PQomJgpndHhuIDIgU2VuZGVyCnR4biBTZW5kZXIKPT0KJiYKZ3R4bmEgMiBBcHBsaWNhdGlvbkFyZ3MgMApieXRlICJsb2NrIgo9PQomJgpndHhuYSAyIEFzc2V0cyAwCmludCBUTVBMX0ZFRVRPS0VOX0lECj09CiYmCmd0eG4gMiBSZWtleVRvCmdsb2JhbCBaZXJvQWRkcmVzcwo9PQomJgomJgpndHhuIDMgVHlwZUVudW0KaW50IGF4ZmVyCj09Cmd0eG4gMyBTZW5kZXIKdHhuIFNlbmRlcgo9PQomJgpndHhuIDMgQXNzZXRSZWNlaXZlcgp0eG4gU2VuZGVyCj09CiYmCmd0eG4gMyBBbW91bnQKaW50IDAKPT0KJiYKZ3R4biAzIFhmZXJBc3NldAppbnQgVE1QTF9BU1NFVF9JRAo9PQomJgpndHhuIDMgUmVrZXlUbwpnbG9iYWwgWmVyb0FkZHJlc3MKPT0KJiYKJiYKZ3R4biA0IFR5cGVFbnVtCmludCBheGZlcgo9PQpndHhuIDQgU2VuZGVyCnR4biBTZW5kZXIKIT0KJiYKZ3R4biA0IEFzc2V0UmVjZWl2ZXIKdHhuIFNlbmRlcgo9PQomJgpndHhuIDQgQXNzZXRBbW91bnQKaW50IDAKPgomJgpndHhuIDQgWGZlckFzc2V0CmludCBUTVBMX0FTU0VUX0lECj09CiYmCmd0eG4gNCBBc3NldENsb3NlVG8KZ2xvYmFsIFplcm9BZGRyZXNzCj09CiYmCmd0eG4gNCBSZWtleVRvCmdsb2JhbCBaZXJvQWRkcmVzcwo9PQomJgomJgpibnogbWFpbl9sMTEKZXJyCm1haW5fbDExOgppbnQgMQpyZXR1cm4KbWFpbl9sMTI6CmludCAwCnJldHVybg=="
+};
 class Tinylock {
-    constructor(tinylocker) {
+    constructor(tinylocker, environment) {
         this.tinylocker = tinylocker;
+        this.environment = environment;
         this.lookUpMap = {};
         this.textDecoder = new TextDecoder();
         this.textEncoder = new TextEncoder();
@@ -72132,7 +72152,7 @@ class Tinylock {
             const buffer = new Uint8Array(this.textEncoder.encode(modifiedTemplate));
             return this.tinylocker.getClient().pipe((0, rxjs_1.switchMap)((client) => client.compile(buffer).do()), (0, rxjs_1.tap)(compileResult => this.lookUpMap[key] = compileResult), (0, rxjs_1.switchMap)((value) => (0, rxjs_1.of)(new algosdk_1.LogicSigAccount(Uint8Array.from(atob(value.result), c => c.charCodeAt(0))))));
         };
-        this.contractTemplate = this.textDecoder.decode(new buffer_1.Buffer(CONTRACT_BASE64.trim(), 'base64'));
+        this.contractTemplate = this.textDecoder.decode(new buffer_1.Buffer(CONTRACT_BASES[environment].trim(), 'base64'));
     }
 }
 exports.Tinylock = Tinylock;
@@ -73698,34 +73718,9 @@ const buffer_1 = __webpack_require__(8764);
 const rxjs_1 = __webpack_require__(7652);
 const tinylock_signature_1 = __webpack_require__(2812);
 const tinyman_signature_1 = __webpack_require__(8749);
-var Environment;
-(function (Environment) {
-    Environment["MainNet"] = "MainNet";
-    Environment["TestNet"] = "TestNet";
-})(Environment || (Environment = {}));
-const algoExplorerPort = 443;
-const algoExplorerClientUrl = {
-    TestNet: "https://testnet.algoexplorerapi.io/",
-    MainNet: "https://algoexplorerapi.io/"
-};
-const algoExplorerIndexerUrl = {
-    TestNet: algoExplorerClientUrl[Environment.TestNet] + "idx2",
-    MainNet: algoExplorerClientUrl[Environment.MainNet] + "idx2"
-};
-const Tinyman_App_Id = {
-    TestNet: 21580889,
-    MainNet: 350338509
-};
-const Tinylock_App_Id = {
-    TestNet: 47355461,
-    MainNet: 445602322
-};
-const Tinylock_Asa_Id = {
-    TestNet: 47355102,
-    MainNet: 410703201
-};
+const constants_1 = __webpack_require__(5601);
 class Tinylocker {
-    constructor(settings) {
+    constructor(settings = {}) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
         this.settings = settings;
         this.rateLimiter = {
@@ -73772,6 +73767,20 @@ class Tinylocker {
                 .assetID(this.tinylockAsaId)
                 .do()), (0, rxjs_1.switchMap)((result) => (0, rxjs_1.of)(result["transactions"])));
         };
+        this.findTinylockMigrationTransactions = (asa) => {
+            return this.getIndexer().pipe((0, rxjs_1.switchMap)(indexer => {
+                const request = indexer.searchForTransactions()
+                    .txType("axfer")
+                    .address(constants_1.migrationData[this.environment].sig_tmpl_v2_migration_account)
+                    .addressRole("sender")
+                    .minRound(constants_1.migrationData[this.environment].sig_tmpl_v2_migration_start)
+                    .maxRound(constants_1.migrationData[this.environment].sig_tmpl_v2_round);
+                if (asa) {
+                    request.assetID(asa);
+                }
+                return request.do();
+            }), (0, rxjs_1.switchMap)(result => (0, rxjs_1.of)(result["transactions"])));
+        };
         this.fetchAssetInfoById = (asaID) => this.getIndexer().pipe((0, rxjs_1.switchMap)(indexer => indexer.lookupAssetByID(asaID).do()));
         this.assets = {};
         this.getAssetInfoById = (asaId) => {
@@ -73786,33 +73795,47 @@ class Tinylocker {
                 : (0, rxjs_1.of)(asset))));
         };
         this.searchToken = (asa, issuedLiquidityTokens) => {
-            return this.findTinylockAppTransactions().pipe((0, rxjs_1.switchMap)((transactions) => {
+            return (0, rxjs_1.merge)(this.findTinylockMigrationTransactions(asa), this.findTinylockAppTransactions()).pipe((0, rxjs_1.switchMap)((transactions) => {
                 if (transactions.length == 0) {
                     return (0, rxjs_1.from)([]);
                 }
                 const asaSeen = {};
                 return (0, rxjs_1.from)(transactions).pipe((0, rxjs_1.mergeMap)((transaction) => {
                     const result = {};
-                    const noteBuffer = buffer_1.Buffer.from(transaction.note, 'base64');
-                    const noteNumber = Number(noteBuffer.toString('utf-8'));
-                    if (noteNumber !== asa) {
-                        // console.log("Transaction not what we are looking for", noteNumber);
-                        return (0, rxjs_1.of)(result);
+                    let signatureAsa = -1;
+                    if (!transaction.note) {
+                        return (0, rxjs_1.of)(null);
                     }
-                    result.account = transaction.sender;
+                    const noteBuffer = buffer_1.Buffer.from(transaction.note, 'base64');
+                    const noteUTF8 = noteBuffer.toString('utf-8');
+                    if (noteUTF8.length == 58) {
+                        result.account = noteUTF8;
+                        signatureAsa = asa;
+                        result.migrated = true;
+                    }
+                    else {
+                        const noteHex = noteBuffer.toString('hex');
+                        const noteNumber = parseInt(noteHex, 16);
+                        if (noteNumber !== asa) {
+                            // console.log("Transaction not what we are looking for", noteNumber);
+                            return (0, rxjs_1.of)(null);
+                        }
+                        signatureAsa = noteNumber;
+                        result.account = transaction.sender;
+                    }
                     if (asaSeen[asa]) {
                         if (asaSeen[asa].indexOf(result.account) >= 0) {
                             // console.log("Using already fetched information for asa: ", asa);
-                            return (0, rxjs_1.of)(result);
+                            return (0, rxjs_1.of)(null);
                         }
                         asaSeen[asa].push(result.account);
                     }
                     else {
                         asaSeen[asa] = [result.account];
                     }
-                    return this.tinylockSignatureGenerator.sendToCompile(noteNumber, this.tinylockAppId, this.tinylockAsaId, result.account)
+                    return this.tinylockSignatureGenerator.sendToCompile(signatureAsa, this.tinylockAppId, this.tinylockAsaId, result.account)
                         .pipe((0, rxjs_1.mergeMap)((signature) => this.getAccountInfoByAddress(signature.address())), (0, rxjs_1.mergeMap)((signatureAccountInfo) => {
-                        console.log("Signature Acc: ", signatureAccountInfo);
+                        // console.log("Signature Acc: ", signatureAccountInfo);
                         const localStateArray = signatureAccountInfo["account"]["apps-local-state"];
                         const assets = signatureAccountInfo["account"]["assets"];
                         const amount = BigInt(assets[0]["amount"]);
@@ -73837,15 +73860,18 @@ class Tinylocker {
                             }
                             return (0, rxjs_1.of)(result);
                         }));
+                    }), (0, rxjs_1.catchError)((error) => {
+                        console.debug("Error: ", error.message, " Entry: ", result, " TX: ", transaction);
+                        return (0, rxjs_1.of)(null);
                     }));
-                }), (0, rxjs_1.filter)(value => Object.getOwnPropertyNames(value).length !== 0), (0, rxjs_1.toArray)());
+                }), (0, rxjs_1.filter)(value => value != null && Object.getOwnPropertyNames(value).length !== 0), (0, rxjs_1.toArray)());
             }));
         };
         this.searchPoolAsa = (asa1, asa2) => {
             if (asa1 < asa2) {
                 let tmp = asa1;
                 asa1 = asa2;
-                asa2 = asa1;
+                asa2 = tmp;
             }
             const poolSignature = this.tinymanSignatureGenerator.getTinymanPoolSignatureAccount(asa1, asa2);
             return this.getAccountInfoByAddress(poolSignature.address()).pipe((0, rxjs_1.switchMap)((accountInfo) => {
@@ -73865,13 +73891,13 @@ class Tinylocker {
                 });
             }));
         };
-        this.environment = (_a = settings.environment) !== null && _a !== void 0 ? _a : Environment.MainNet;
-        this.tinymanAppId = (_b = settings.tinymanAppId) !== null && _b !== void 0 ? _b : Tinyman_App_Id[this.environment];
-        this.tinylockAppId = (_c = settings.tinylockAppId) !== null && _c !== void 0 ? _c : Tinylock_App_Id[this.environment];
+        this.environment = (_a = settings.environment) !== null && _a !== void 0 ? _a : constants_1.Environment.MainNet;
+        this.tinymanAppId = (_b = settings.tinymanAppId) !== null && _b !== void 0 ? _b : constants_1.Tinyman_App_Id[this.environment];
+        this.tinylockAppId = (_c = settings.tinylockAppId) !== null && _c !== void 0 ? _c : constants_1.Tinylock_App_Id[this.environment];
         this.enableAPICallRateLimit = (_d = settings.enableAPICallRateLimit) !== null && _d !== void 0 ? _d : true;
         this.tinymanSignatureGenerator = new tinyman_signature_1.Tinyman(this.tinymanAppId);
-        this.tinylockAsaId = Tinylock_Asa_Id[this.environment];
-        this.tinylockSignatureGenerator = new tinylock_signature_1.Tinylock(this);
+        this.tinylockAsaId = constants_1.Tinylock_Asa_Id[this.environment];
+        this.tinylockSignatureGenerator = new tinylock_signature_1.Tinylock(this, this.environment);
         if (settings.maxCallsPerSecond) {
             this.rateLimiter.maxCallsPerSecond = settings.maxCallsPerSecond;
             this.rateLimiter.maxCallsDelay = 1000 / this.rateLimiter.maxCallsPerSecond;
@@ -73880,13 +73906,13 @@ class Tinylocker {
             this.client = settings.client;
         }
         else {
-            this.client = new algosdk_1.Algodv2((_e = settings.clientToken) !== null && _e !== void 0 ? _e : '', (_f = settings.clientBase) !== null && _f !== void 0 ? _f : algoExplorerClientUrl[this.environment], (_g = settings.clientPort) !== null && _g !== void 0 ? _g : algoExplorerPort);
+            this.client = new algosdk_1.Algodv2((_e = settings.clientToken) !== null && _e !== void 0 ? _e : '', (_f = settings.clientBase) !== null && _f !== void 0 ? _f : constants_1.algoExplorerClientUrl[this.environment], (_g = settings.clientPort) !== null && _g !== void 0 ? _g : constants_1.algoExplorerPort);
         }
         if (settings.indexer) {
             this.indexer = settings.indexer;
         }
         else {
-            this.indexer = new algosdk_1.Indexer((_h = settings.indexerToken) !== null && _h !== void 0 ? _h : '', (_j = settings.indexerBase) !== null && _j !== void 0 ? _j : algoExplorerIndexerUrl[this.environment], (_k = settings.indexerPort) !== null && _k !== void 0 ? _k : algoExplorerPort);
+            this.indexer = new algosdk_1.Indexer((_h = settings.indexerToken) !== null && _h !== void 0 ? _h : '', (_j = settings.indexerBase) !== null && _j !== void 0 ? _j : constants_1.algoExplorerIndexerUrl[this.environment], (_k = settings.indexerPort) !== null && _k !== void 0 ? _k : constants_1.algoExplorerPort);
         }
     }
 }
