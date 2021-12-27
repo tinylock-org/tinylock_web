@@ -53,7 +53,8 @@ class Tinylocker {
                 .address((0, algosdk_1.getApplicationAddress)(this.tinylockAppId))
                 .addressRole("receiver")
                 .assetID(this.tinylockAsaId)
-                .do()), (0, rxjs_1.switchMap)((result) => (0, rxjs_1.of)(result["transactions"])));
+                .minRound(constants_1.migrationData[this.environment].sig_tmpl_v2_round)
+                .do()), (0, rxjs_1.switchMap)((result) => (0, rxjs_1.of)(result["transactions"])), (0, rxjs_1.tap)(txn => console.log("new: ", txn)));
         };
         this.findTinylockMigrationTransactions = (asa) => {
             return this.getIndexer().pipe((0, rxjs_1.switchMap)(indexer => {
@@ -67,7 +68,7 @@ class Tinylocker {
                     request.assetID(asa);
                 }
                 return request.do();
-            }), (0, rxjs_1.switchMap)(result => (0, rxjs_1.of)(result["transactions"])));
+            }), (0, rxjs_1.switchMap)(result => (0, rxjs_1.of)(result["transactions"])), (0, rxjs_1.tap)(txn => console.log("mig: ", txn)));
         };
         this.fetchAssetInfoById = (asaID) => this.getIndexer().pipe((0, rxjs_1.switchMap)(indexer => indexer.lookupAssetByID(asaID).do()));
         this.assets = {};
@@ -83,7 +84,7 @@ class Tinylocker {
                 : (0, rxjs_1.of)(asset))));
         };
         this.searchToken = (asa, issuedLiquidityTokens) => {
-            return (0, rxjs_1.merge)(this.findTinylockMigrationTransactions(asa), this.findTinylockAppTransactions()).pipe((0, rxjs_1.switchMap)((transactions) => {
+            return (0, rxjs_1.merge)(this.findTinylockMigrationTransactions(asa), this.findTinylockAppTransactions()).pipe((0, rxjs_1.mergeMap)((transactions) => {
                 if (transactions.length == 0) {
                     return (0, rxjs_1.from)([]);
                 }
@@ -102,8 +103,7 @@ class Tinylocker {
                         result.migrated = true;
                     }
                     else {
-                        const noteHex = noteBuffer.toString('hex');
-                        const noteNumber = parseInt(noteHex, 16);
+                        const noteNumber = parseInt(noteUTF8, 10);
                         if (noteNumber !== asa) {
                             // console.log("Transaction not what we are looking for", noteNumber);
                             return (0, rxjs_1.of)(null);
@@ -153,7 +153,7 @@ class Tinylocker {
                         return (0, rxjs_1.of)(null);
                     }));
                 }), (0, rxjs_1.filter)(value => value != null && Object.getOwnPropertyNames(value).length !== 0), (0, rxjs_1.toArray)());
-            }));
+            }), (0, rxjs_1.concatAll)(), (0, rxjs_1.toArray)());
         };
         this.searchPoolAsa = (asa1, asa2) => {
             if (asa1 < asa2) {

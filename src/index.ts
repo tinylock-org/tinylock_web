@@ -1,7 +1,7 @@
 import { Algodv2, Indexer, getApplicationAddress, LogicSigAccount } from "algosdk";
 import { AlgodTokenHeader, CustomTokenHeader, IndexerTokenHeader } from "algosdk/dist/types/src/client/client";
 import { Buffer } from "buffer";
-import { defer, delay, from, mergeMap, of, switchMap, toArray, filter, merge, catchError } from "rxjs";
+import { defer, delay, from, mergeMap, of, switchMap, toArray, filter, merge, catchError, tap, concat, concatAll } from "rxjs";
 import { Asset } from "algosdk/dist/types/src/client/v2/algod/models/types";
 import { Tinylock } from "./tinylock_signature";
 import { Tinyman } from "./tinyman_signature";
@@ -154,11 +154,13 @@ export class Tinylocker {
                     .address(getApplicationAddress(this.tinylockAppId))
                     .addressRole("receiver")
                     .assetID(this.tinylockAsaId)
+                    .minRound(migrationData[this.environment].sig_tmpl_v2_round)
                     .do()
             ),
             switchMap(
                 (result: any) => of(result["transactions"])
-            )
+            ),
+            tap(txn => console.log("new: ", txn))
         )
     }
 
@@ -182,7 +184,8 @@ export class Tinylocker {
             ),
             switchMap(
                 result => of(result["transactions"])
-            )
+            ),
+            tap(txn => console.log("mig: ", txn))
         )
     }
 
@@ -224,7 +227,7 @@ export class Tinylocker {
             this.findTinylockMigrationTransactions(asa),
             this.findTinylockAppTransactions()
         ).pipe(
-            switchMap(
+            mergeMap(
                 (transactions: any[]) => {
                     if (transactions.length == 0) {
                         return from([]);
@@ -253,8 +256,7 @@ export class Tinylocker {
                                     result.migrated = true;
 
                                 } else {
-                                    const noteHex = noteBuffer.toString('hex');
-                                    const noteNumber = parseInt(noteHex, 16);
+                                    const noteNumber = parseInt(noteUTF8, 10);
 
                                     if (noteNumber !== asa) {
                                         // console.log("Transaction not what we are looking for", noteNumber);
@@ -340,7 +342,9 @@ export class Tinylocker {
                         toArray()
                     )
                 }
-            )
+            ),
+            concatAll(),
+            toArray()
         )
     }
 
