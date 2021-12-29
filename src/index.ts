@@ -39,6 +39,12 @@ export interface PoolData {
     issuedLiquidityTokens: BigInt;
 }
 
+interface NoteResult {
+    isNumber: boolean;
+    isAddress: boolean;
+    result: string | number | null;
+}
+
 export class Tinylocker {
 
     client: Algodv2;
@@ -248,22 +254,18 @@ export class Tinylocker {
                                     return of(null);
                                 }
 
-                                const noteBuffer = Buffer.from(transaction.note, 'base64');
-                                const noteUTF8 = noteBuffer.toString('utf-8');
-                                if (noteUTF8.length == 58) {
-                                    result.account = noteUTF8;
+                                const noteResult = this.parseNote(transaction.note, asa);
+
+                                if (noteResult.isAddress) {
+                                    result.account = noteResult.result as string;
                                     signatureAsa = asa;
                                     result.migrated = true;
-
-                                } else {
-                                    const noteNumber = parseInt(noteUTF8, 10);
-
-                                    if (noteNumber !== asa) {
-                                        // console.log("Transaction not what we are looking for", noteNumber);
-                                        return of(null);
-                                    }
-                                    signatureAsa = noteNumber;
+                                } else if (noteResult.isNumber) {
+                                    signatureAsa = noteResult.result as number;
                                     result.account = transaction.sender;
+                                } else {
+                                    console.log("Transaction not what we are looking for", noteResult.result);
+                                    return of(null);
                                 }
 
                                 if (asaSeen[asa]) {
@@ -330,15 +332,15 @@ export class Tinylocker {
                                             }
                                         ),
                                         catchError(
-                                          (error: any) => {
-                                            console.debug("Error: ", error.message, " Entry: ", result, " TX: ", transaction);
-                                            return of(null);
-                                          }
+                                            (error: any) => {
+                                                console.debug("Error: ", error.message, " Entry: ", result, " TX: ", transaction);
+                                                return of(null);
+                                            }
                                         )
                                     )
                             }
                         ),
-                        filter(value => value != null && Object.getOwnPropertyNames(value).length !== 0 ),
+                        filter(value => value != null && Object.getOwnPropertyNames(value).length !== 0),
                         toArray()
                     )
                 }
@@ -388,6 +390,36 @@ export class Tinylocker {
                 }
             )
         )
+    }
+
+    private parseNote(note: string, asa?: number): NoteResult {
+        const noteBuffer = Buffer.from(note, 'base64');
+        const noteUTF8 = noteBuffer.toString('utf-8');
+
+        const result: NoteResult = {
+            isNumber: false,
+            isAddress: false,
+            result: null
+        }
+
+        if (noteUTF8.length == 58) {
+            result.isAddress = true;
+            result.result = noteUTF8;
+            return result;
+        }
+
+        let noteNumber = parseInt(noteUTF8, 10);
+
+        if (Number.isNaN(noteNumber) || (asa && noteNumber != asa)) {
+            noteNumber = parseInt(noteBuffer.toString('hex'), 16);
+            if (Number.isNaN(noteNumber) || (asa && noteNumber != asa)) {
+                return result;
+            }
+        }
+        result.isNumber = true;
+        result.result = noteNumber;
+
+        return result;
     }
 
 
