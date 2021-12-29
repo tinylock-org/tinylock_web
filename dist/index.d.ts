@@ -71,4 +71,5 @@ export declare class Tinylocker {
         poolAsaId: number;
         issuedLiquidityTokens: bigint;
     }>;
+    private parseNote;
 }

@@ -73807,21 +73807,19 @@ class Tinylocker {
                     if (!transaction.note) {
                         return (0, rxjs_1.of)(null);
                     }
-                    const noteBuffer = buffer_1.Buffer.from(transaction.note, 'base64');
-                    const noteUTF8 = noteBuffer.toString('utf-8');
-                    if (noteUTF8.length == 58) {
-                        result.account = noteUTF8;
+                    const noteResult = this.parseNote(transaction.note, asa);
+                    if (noteResult.isAddress) {
+                        result.account = noteResult.result;
                         signatureAsa = asa;
                         result.migrated = true;
                     }
-                    else {
-                        const noteNumber = parseInt(noteUTF8, 10);
-                        if (noteNumber !== asa) {
-                            // console.log("Transaction not what we are looking for", noteNumber);
-                            return (0, rxjs_1.of)(null);
-                        }
-                        signatureAsa = noteNumber;
+                    else if (noteResult.isNumber) {
+                        signatureAsa = noteResult.result;
                         result.account = transaction.sender;
+                    }
+                    else {
+                        console.log("Transaction not what we are looking for", noteResult.result);
+                        return (0, rxjs_1.of)(null);
                     }
                     if (asaSeen[asa]) {
                         if (asaSeen[asa].indexOf(result.account) >= 0) {
@@ -73914,6 +73912,30 @@ class Tinylocker {
         else {
             this.indexer = new algosdk_1.Indexer((_h = settings.indexerToken) !== null && _h !== void 0 ? _h : '', (_j = settings.indexerBase) !== null && _j !== void 0 ? _j : constants_1.algoExplorerIndexerUrl[this.environment], (_k = settings.indexerPort) !== null && _k !== void 0 ? _k : constants_1.algoExplorerPort);
         }
+    }
+    parseNote(note, asa) {
+        const noteBuffer = buffer_1.Buffer.from(note, 'base64');
+        const noteUTF8 = noteBuffer.toString('utf-8');
+        const result = {
+            isNumber: false,
+            isAddress: false,
+            result: null
+        };
+        if (noteUTF8.length == 58) {
+            result.isAddress = true;
+            result.result = noteUTF8;
+            return result;
+        }
+        let noteNumber = parseInt(noteUTF8, 10);
+        if (Number.isNaN(noteNumber) || (asa && noteNumber != asa)) {
+            noteNumber = parseInt(noteBuffer.toString('hex'), 16);
+            if (Number.isNaN(noteNumber) || (asa && noteNumber != asa)) {
+                return result;
+            }
+        }
+        result.isNumber = true;
+        result.result = noteNumber;
+        return result;
     }
 }
 exports.Tinylocker = Tinylocker;
