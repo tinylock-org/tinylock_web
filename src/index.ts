@@ -166,7 +166,7 @@ export class Tinylocker {
             switchMap(
                 (result: any) => of(result["transactions"])
             ),
-            tap(txn => console.log("new: ", txn))
+            // tap(txn => console.log("new: ", txn))
         )
     }
 
@@ -191,7 +191,7 @@ export class Tinylocker {
             switchMap(
                 result => of(result["transactions"])
             ),
-            tap(txn => console.log("mig: ", txn))
+            // tap(txn => console.log("mig: ", txn))
         )
     }
 
@@ -264,7 +264,7 @@ export class Tinylocker {
                                     signatureAsa = noteResult.result as number;
                                     result.account = transaction.sender;
                                 } else {
-                                    console.log("Transaction not what we are looking for", noteResult.result);
+                                    console.debug("Transaction not what we are looking for", noteResult.result);
                                     return of(null);
                                 }
 
