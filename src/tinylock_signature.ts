@@ -18,10 +18,10 @@ export class Tinylock {
     textEncoder = new TextEncoder();
 
     constructor(
-        private readonly tinylocker: Tinylocker,
-        private readonly environment: Environment
+        private readonly tinylocker: Tinylocker
     ) {
-        this.contractTemplate = this.textDecoder.decode(new Buffer(CONTRACT_BASES[environment].trim(), 'base64'));
+        
+        this.contractTemplate = this.textDecoder.decode(new Buffer(CONTRACT_BASES[tinylocker.environment].trim(), 'base64'));
     }
 
     public sendToCompile = (

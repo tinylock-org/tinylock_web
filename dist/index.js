@@ -9,7 +9,7 @@ const tinyman_signature_1 = require("./tinyman_signature");
 const constants_1 = require("./constants");
 class Tinylocker {
     constructor(settings = {}) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
         this.settings = settings;
         this.rateLimiter = {
             maxCallsPerSecond: 10,
@@ -47,14 +47,15 @@ class Tinylocker {
         this.getAccountInfoByAddress = (address) => this.getIndexer().pipe((0, rxjs_1.mergeMap)((indexer) => {
             return (0, rxjs_1.from)(indexer.lookupAccountByID(address).do());
         }));
-        this.findTinylockAppTransactions = () => {
+        this.findTinylockAppTransactions = (tinylockAsaId, tinylockAppId) => {
+            this.log("Trying to find app transactions with: ", tinylockAsaId, " , ", tinylockAppId);
             return this.getIndexer().pipe((0, rxjs_1.switchMap)((indexer) => indexer.searchForTransactions()
                 .txType("axfer")
-                .address((0, algosdk_1.getApplicationAddress)(this.tinylockAppId))
+                .address((0, algosdk_1.getApplicationAddress)(tinylockAppId))
                 .addressRole("receiver")
-                .assetID(this.tinylockAsaId)
+                .assetID(tinylockAsaId)
                 .minRound(constants_1.migrationData[this.environment].sig_tmpl_v2_round)
-                .do()), (0, rxjs_1.switchMap)((result) => (0, rxjs_1.of)(result["transactions"])), (0, rxjs_1.tap)(txn => console.log("new: ", txn)));
+                .do()), (0, rxjs_1.switchMap)((result) => (0, rxjs_1.of)(result["transactions"])));
         };
         this.findTinylockMigrationTransactions = (asa) => {
             return this.getIndexer().pipe((0, rxjs_1.switchMap)(indexer => {
@@ -68,7 +69,7 @@ class Tinylocker {
                     request.assetID(asa);
                 }
                 return request.do();
-            }), (0, rxjs_1.switchMap)(result => (0, rxjs_1.of)(result["transactions"])), (0, rxjs_1.tap)(txn => console.log("mig: ", txn)));
+            }), (0, rxjs_1.switchMap)(result => (0, rxjs_1.of)(result["transactions"])));
         };
         this.fetchAssetInfoById = (asaID) => this.getIndexer().pipe((0, rxjs_1.switchMap)(indexer => indexer.lookupAssetByID(asaID).do()));
         this.assets = {};
@@ -83,13 +84,24 @@ class Tinylocker {
                 }))
                 : (0, rxjs_1.of)(asset))));
         };
+        this.wrapFindTinylockAppTransactions = (tinylock_asa = this.tinylockAsaId, tinylock_app = this.tinylockAppId) => {
+            return this.findTinylockAppTransactions(tinylock_asa, tinylock_app).pipe((0, rxjs_1.switchMap)(transactions => (0, rxjs_1.of)({
+                transactions,
+                tinylock_asa,
+                tinylock_app
+            })));
+        };
         this.searchToken = (asa, issuedLiquidityTokens) => {
-            return (0, rxjs_1.merge)(this.findTinylockMigrationTransactions(asa), this.findTinylockAppTransactions()).pipe((0, rxjs_1.mergeMap)((transactions) => {
-                if (transactions.length == 0) {
+            return (0, rxjs_1.merge)(this.findTinylockMigrationTransactions(asa).pipe((0, rxjs_1.switchMap)(transactions => (0, rxjs_1.of)({
+                transactions,
+                tinylock_asa: constants_1.Tinylock_Asa_Id[constants_1.TinylockVersion.V1][this.environment],
+                tinylock_app: constants_1.Tinylock_App_Id[constants_1.TinylockVersion.V1][this.environment]
+            }))), this.wrapFindTinylockAppTransactions(), this.wrapFindTinylockAppTransactions(constants_1.Tinylock_Asa_Id[constants_1.TinylockVersion.V1][this.environment], constants_1.Tinylock_App_Id[constants_1.TinylockVersion.V1][this.environment])).pipe((0, rxjs_1.mergeMap)((transactionsWrapper) => {
+                if (transactionsWrapper.transactions.length == 0) {
                     return (0, rxjs_1.from)([]);
                 }
                 const asaSeen = {};
-                return (0, rxjs_1.from)(transactions).pipe((0, rxjs_1.mergeMap)((transaction) => {
+                return (0, rxjs_1.from)(transactionsWrapper.transactions).pipe((0, rxjs_1.mergeMap)((transaction) => {
                     const result = {};
                     let signatureAsa = -1;
                     if (!transaction.note) {
@@ -106,7 +118,7 @@ class Tinylocker {
                         result.account = transaction.sender;
                     }
                     else {
-                        console.log("Transaction not what we are looking for", noteResult.result);
+                        this.log("Transaction not what we are looking for", noteResult.result);
                         return (0, rxjs_1.of)(null);
                     }
                     if (asaSeen[asa]) {
@@ -119,14 +131,15 @@ class Tinylocker {
                     else {
                         asaSeen[asa] = [result.account];
                     }
-                    return this.tinylockSignatureGenerator.sendToCompile(signatureAsa, this.tinylockAppId, this.tinylockAsaId, result.account)
+                    this.log(signatureAsa, " ", this.tinylockAppId, " ", this.tinylockAsaId, " ", result.account);
+                    return this.tinylockSignatureGenerator.sendToCompile(signatureAsa, transactionsWrapper.tinylock_app, transactionsWrapper.tinylock_asa, result.account)
                         .pipe((0, rxjs_1.mergeMap)((signature) => this.getAccountInfoByAddress(signature.address())), (0, rxjs_1.mergeMap)((signatureAccountInfo) => {
                         // console.log("Signature Acc: ", signatureAccountInfo);
                         const localStateArray = signatureAccountInfo["account"]["apps-local-state"];
                         const assets = signatureAccountInfo["account"]["assets"];
                         const amount = BigInt(assets[0]["amount"]);
                         if (amount <= 0) {
-                            return (0, rxjs_1.of)(result);
+                            return (0, rxjs_1.of)(null);
                         }
                         const timeEntry = localStateArray[0]["key-value"][0];
                         const time = timeEntry["value"]["uint"] * 1000;
@@ -147,7 +160,7 @@ class Tinylocker {
                             return (0, rxjs_1.of)(result);
                         }));
                     }), (0, rxjs_1.catchError)((error) => {
-                        console.debug("Error: ", error.message, " Entry: ", result, " TX: ", transaction);
+                        this.log("Error: ", error.message, " Entry: ", result, " TX: ", transaction);
                         return (0, rxjs_1.of)(null);
                     }));
                 }), (0, rxjs_1.filter)(value => value != null && Object.getOwnPropertyNames(value).length !== 0), (0, rxjs_1.toArray)());
@@ -178,12 +191,11 @@ class Tinylocker {
             }));
         };
         this.environment = (_a = settings.environment) !== null && _a !== void 0 ? _a : constants_1.Environment.MainNet;
-        this.tinymanAppId = (_b = settings.tinymanAppId) !== null && _b !== void 0 ? _b : constants_1.Tinyman_App_Id[this.environment];
-        this.tinylockAppId = (_c = settings.tinylockAppId) !== null && _c !== void 0 ? _c : constants_1.Tinylock_App_Id[this.environment];
+        this.tinymanAppId = (_b = settings.tinymanAppId) !== null && _b !== void 0 ? _b : constants_1.Tinyman_App_Id[constants_1.TinylockVersion.V1_1][this.environment];
+        this.tinylockAppId = (_c = settings.tinylockAppId) !== null && _c !== void 0 ? _c : constants_1.Tinylock_App_Id[constants_1.TinylockVersion.V1_1][this.environment];
         this.enableAPICallRateLimit = (_d = settings.enableAPICallRateLimit) !== null && _d !== void 0 ? _d : true;
-        this.tinymanSignatureGenerator = new tinyman_signature_1.Tinyman(this.tinymanAppId);
-        this.tinylockAsaId = constants_1.Tinylock_Asa_Id[this.environment];
-        this.tinylockSignatureGenerator = new tinylock_signature_1.Tinylock(this, this.environment);
+        this.tinylockAsaId = constants_1.Tinylock_Asa_Id[constants_1.TinylockVersion.V1_1][this.environment];
+        this.logEnabled = (_e = settings.log) !== null && _e !== void 0 ? _e : true;
         if (settings.maxCallsPerSecond) {
             this.rateLimiter.maxCallsPerSecond = settings.maxCallsPerSecond;
             this.rateLimiter.maxCallsDelay = 1000 / this.rateLimiter.maxCallsPerSecond;
@@ -192,13 +204,20 @@ class Tinylocker {
             this.client = settings.client;
         }
         else {
-            this.client = new algosdk_1.Algodv2((_e = settings.clientToken) !== null && _e !== void 0 ? _e : '', (_f = settings.clientBase) !== null && _f !== void 0 ? _f : constants_1.algoExplorerClientUrl[this.environment], (_g = settings.clientPort) !== null && _g !== void 0 ? _g : constants_1.algoExplorerPort);
+            this.client = new algosdk_1.Algodv2((_f = settings.clientToken) !== null && _f !== void 0 ? _f : '', (_g = settings.clientBase) !== null && _g !== void 0 ? _g : constants_1.algoExplorerClientUrl[this.environment], (_h = settings.clientPort) !== null && _h !== void 0 ? _h : constants_1.algoExplorerPort);
         }
         if (settings.indexer) {
             this.indexer = settings.indexer;
         }
         else {
-            this.indexer = new algosdk_1.Indexer((_h = settings.indexerToken) !== null && _h !== void 0 ? _h : '', (_j = settings.indexerBase) !== null && _j !== void 0 ? _j : constants_1.algoExplorerIndexerUrl[this.environment], (_k = settings.indexerPort) !== null && _k !== void 0 ? _k : constants_1.algoExplorerPort);
+            this.indexer = new algosdk_1.Indexer((_j = settings.indexerToken) !== null && _j !== void 0 ? _j : '', (_k = settings.indexerBase) !== null && _k !== void 0 ? _k : constants_1.algoExplorerIndexerUrl[this.environment], (_l = settings.indexerPort) !== null && _l !== void 0 ? _l : constants_1.algoExplorerPort);
+        }
+        this.tinymanSignatureGenerator = new tinyman_signature_1.Tinyman(this.tinymanAppId);
+        this.tinylockSignatureGenerator = new tinylock_signature_1.Tinylock(this);
+    }
+    log(text, ...misc) {
+        if (this.logEnabled) {
+            console.log(text, ...misc);
         }
     }
     parseNote(note, asa) {

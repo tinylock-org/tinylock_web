@@ -3,19 +3,43 @@ export enum Environment {
     TestNet = "TestNet"
 }
 
+export enum TinylockVersion {
+    V1,
+    V1_1
+}
+
 export const Tinyman_App_Id = {
-    TestNet: 21580889,
-    MainNet: 350338509
+    [TinylockVersion.V1] : {
+        TestNet: 21580889,
+        MainNet: 350338509
+    },
+    [TinylockVersion.V1_1] : {
+        TestNet: 62368684,
+        MainNet: 552635992
+    }
 }
 
 export const Tinylock_App_Id = {
-    TestNet: 47355461,
-    MainNet: 445602322
+    [TinylockVersion.V1]: {
+        TestNet: 47355461,
+        MainNet: 445602322
+    },
+    [TinylockVersion.V1_1]: {
+        TestNet: 62630861,
+        MainNet: 551903720
+    }
+    
 }
 
 export const Tinylock_Asa_Id = {
-    TestNet: 47355102,
-    MainNet: 410703201
+    [TinylockVersion.V1]: {
+        TestNet: 47355102,
+        MainNet: 410703201
+    },
+    [TinylockVersion.V1_1]: {
+        TestNet: 62630104,
+        MainNet: 551903529
+    }
 }
 
 export const algoExplorerPort = 443;

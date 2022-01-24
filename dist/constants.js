@@ -1,22 +1,45 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.migrationData = exports.algoExplorerIndexerUrl = exports.algoExplorerClientUrl = exports.algoExplorerPort = exports.Tinylock_Asa_Id = exports.Tinylock_App_Id = exports.Tinyman_App_Id = exports.Environment = void 0;
+exports.migrationData = exports.algoExplorerIndexerUrl = exports.algoExplorerClientUrl = exports.algoExplorerPort = exports.Tinylock_Asa_Id = exports.Tinylock_App_Id = exports.Tinyman_App_Id = exports.TinylockVersion = exports.Environment = void 0;
 var Environment;
 (function (Environment) {
     Environment["MainNet"] = "MainNet";
     Environment["TestNet"] = "TestNet";
 })(Environment = exports.Environment || (exports.Environment = {}));
+var TinylockVersion;
+(function (TinylockVersion) {
+    TinylockVersion[TinylockVersion["V1"] = 0] = "V1";
+    TinylockVersion[TinylockVersion["V1_1"] = 1] = "V1_1";
+})(TinylockVersion = exports.TinylockVersion || (exports.TinylockVersion = {}));
 exports.Tinyman_App_Id = {
-    TestNet: 21580889,
-    MainNet: 350338509
+    [TinylockVersion.V1]: {
+        TestNet: 21580889,
+        MainNet: 350338509
+    },
+    [TinylockVersion.V1_1]: {
+        TestNet: 62368684,
+        MainNet: 552635992
+    }
 };
 exports.Tinylock_App_Id = {
-    TestNet: 47355461,
-    MainNet: 445602322
+    [TinylockVersion.V1]: {
+        TestNet: 47355461,
+        MainNet: 445602322
+    },
+    [TinylockVersion.V1_1]: {
+        TestNet: 62630861,
+        MainNet: 551903720
+    }
 };
 exports.Tinylock_Asa_Id = {
-    TestNet: 47355102,
-    MainNet: 410703201
+    [TinylockVersion.V1]: {
+        TestNet: 47355102,
+        MainNet: 410703201
+    },
+    [TinylockVersion.V1_1]: {
+        TestNet: 62630104,
+        MainNet: 551903529
+    }
 };
 exports.algoExplorerPort = 443;
 exports.algoExplorerClientUrl = {

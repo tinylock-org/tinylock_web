@@ -1,11 +1,11 @@
 import { Algodv2, Indexer, getApplicationAddress, LogicSigAccount } from "algosdk";
-import { AlgodTokenHeader, CustomTokenHeader, IndexerTokenHeader } from "algosdk/dist/types/src/client/client";
+import { AlgodTokenHeader, IndexerTokenHeader } from "algosdk/dist/types/src/client/urlTokenBaseHTTPClient";
 import { Buffer } from "buffer";
-import { defer, delay, from, mergeMap, of, switchMap, toArray, filter, merge, catchError, tap, concat, concatAll } from "rxjs";
+import { defer, delay, from, mergeMap, of, switchMap, toArray, filter, merge, catchError, concatAll } from "rxjs";
 import { Asset } from "algosdk/dist/types/src/client/v2/algod/models/types";
 import { Tinylock } from "./tinylock_signature";
 import { Tinyman } from "./tinyman_signature";
-import { algoExplorerClientUrl, algoExplorerIndexerUrl, algoExplorerPort, Environment, migrationData, Tinylock_App_Id, Tinylock_Asa_Id, Tinyman_App_Id } from "./constants";
+import { algoExplorerClientUrl, algoExplorerIndexerUrl, algoExplorerPort, Environment, migrationData, TinylockVersion, Tinylock_App_Id, Tinylock_Asa_Id, Tinyman_App_Id } from "./constants";
 
 export interface TinylockerConfig {
     enableAPICallRateLimit?: boolean;
@@ -13,14 +13,15 @@ export interface TinylockerConfig {
     environment?: keyof typeof Environment;
     client?: Algodv2;
     indexer?: Indexer;
-    clientToken?: string | AlgodTokenHeader | CustomTokenHeader;
-    indexerToken?: string | IndexerTokenHeader | CustomTokenHeader;
+    clientToken?: string | AlgodTokenHeader;
+    indexerToken?: string | IndexerTokenHeader;
     clientBase?: string;
     clientPort?: string | number;
     indexerBase?: string;
     indexerPort?: string | number;
     tinymanAppId?: number;
     tinylockAppId?: number;
+    log?: boolean;
 }
 
 export interface SearchResultEntry {
@@ -55,6 +56,8 @@ export class Tinylocker {
     tinylockAppId: number;
     tinylockAsaId: number;
 
+    logEnabled: boolean;
+
     enableAPICallRateLimit: boolean;
 
     rateLimiter = {
@@ -75,12 +78,11 @@ export class Tinylocker {
         private readonly settings = {} as TinylockerConfig
     ) {
         this.environment = settings.environment ?? Environment.MainNet as any;
-        this.tinymanAppId = settings.tinymanAppId ?? Tinyman_App_Id[this.environment];
-        this.tinylockAppId = settings.tinylockAppId ?? Tinylock_App_Id[this.environment];
+        this.tinymanAppId = settings.tinymanAppId ?? Tinyman_App_Id[TinylockVersion.V1_1][this.environment];
+        this.tinylockAppId = settings.tinylockAppId ?? Tinylock_App_Id[TinylockVersion.V1_1][this.environment];
         this.enableAPICallRateLimit = settings.enableAPICallRateLimit ?? true;
-        this.tinymanSignatureGenerator = new Tinyman(this.tinymanAppId);
-        this.tinylockAsaId = Tinylock_Asa_Id[this.environment];
-        this.tinylockSignatureGenerator = new Tinylock(this, this.environment);
+        this.tinylockAsaId = Tinylock_Asa_Id[TinylockVersion.V1_1][this.environment];
+        this.logEnabled = settings.log ?? false;
 
         if (settings.maxCallsPerSecond) {
             this.rateLimiter.maxCallsPerSecond = settings.maxCallsPerSecond;
@@ -106,6 +108,9 @@ export class Tinylocker {
                 settings.indexerPort ?? algoExplorerPort
             );
         }
+
+        this.tinymanSignatureGenerator = new Tinyman(this.tinymanAppId);
+        this.tinylockSignatureGenerator = new Tinylock(this);
     }
 
     private requestLimiter = () => {
@@ -152,14 +157,15 @@ export class Tinylocker {
             )
         );
 
-    private findTinylockAppTransactions = () => {
+    private findTinylockAppTransactions = (tinylockAsaId: number, tinylockAppId: number) => {
+        this.log("Trying to find app transactions with: ", tinylockAsaId, " , ", tinylockAppId);
         return this.getIndexer().pipe(
             switchMap(
                 (indexer: Indexer) => indexer.searchForTransactions()
                     .txType("axfer")
-                    .address(getApplicationAddress(this.tinylockAppId))
+                    .address(getApplicationAddress(tinylockAppId))
                     .addressRole("receiver")
-                    .assetID(this.tinylockAsaId)
+                    .assetID(tinylockAsaId)
                     .minRound(migrationData[this.environment].sig_tmpl_v2_round)
                     .do()
             ),
@@ -195,6 +201,12 @@ export class Tinylocker {
         )
     }
 
+    private log(text: any, ...misc: any[]){
+        if(this.logEnabled){
+            console.log(text, ...misc);
+        }
+    }
+
     public fetchAssetInfoById = (asaID: number) =>
         this.getIndexer().pipe(
             switchMap(
@@ -227,15 +239,49 @@ export class Tinylocker {
         )
     }
 
+    private wrapFindTinylockAppTransactions = (
+        tinylock_asa = this.tinylockAsaId, 
+        tinylock_app = this.tinylockAppId
+        ) => {
+            
+        return this.findTinylockAppTransactions(tinylock_asa, tinylock_app).pipe(
+          switchMap(
+            transactions => of(
+              {
+                transactions,
+                tinylock_asa,
+                tinylock_app
+              }
+            )
+          )
+        )
+      }
+
     public searchToken = (asa: number, issuedLiquidityTokens?: bigint) => {
 
         return merge(
-            this.findTinylockMigrationTransactions(asa),
-            this.findTinylockAppTransactions()
+            this.findTinylockMigrationTransactions(asa).pipe(
+                switchMap(
+                    transactions => of({
+                        transactions,
+                        tinylock_asa: Tinylock_Asa_Id[TinylockVersion.V1][this.environment],
+                        tinylock_app: Tinylock_App_Id[TinylockVersion.V1][this.environment]
+                    })
+                )
+            ),
+            this.wrapFindTinylockAppTransactions(),
+            this.wrapFindTinylockAppTransactions(
+                Tinylock_Asa_Id[TinylockVersion.V1][this.environment],
+                Tinylock_App_Id[TinylockVersion.V1][this.environment]
+                )
         ).pipe(
             mergeMap(
-                (transactions: any[]) => {
-                    if (transactions.length == 0) {
+                (transactionsWrapper: {
+                    transactions: any[],
+                    tinylock_asa: number,
+                    tinylock_app: number
+                  }) => {
+                    if (transactionsWrapper.transactions.length == 0) {
                         return from([]);
                     }
 
@@ -243,7 +289,7 @@ export class Tinylocker {
 
                     };
 
-                    return from(transactions).pipe(
+                    return from(transactionsWrapper.transactions).pipe(
                         mergeMap(
                             (transaction: any) => {
                                 const result = {} as SearchResultEntry;
@@ -264,7 +310,7 @@ export class Tinylocker {
                                     signatureAsa = noteResult.result as number;
                                     result.account = transaction.sender;
                                 } else {
-                                    console.debug("Transaction not what we are looking for", noteResult.result);
+                                    this.log("Transaction not what we are looking for", noteResult.result);
                                     return of(null);
                                 }
 
@@ -279,10 +325,12 @@ export class Tinylocker {
                                     asaSeen[asa] = [result.account];
                                 }
 
+                                this.log(signatureAsa, " ", this.tinylockAppId, " ", this.tinylockAsaId, " ", result.account);
+
                                 return this.tinylockSignatureGenerator.sendToCompile(
                                     signatureAsa,
-                                    this.tinylockAppId,
-                                    this.tinylockAsaId,
+                                    transactionsWrapper.tinylock_app,
+                                    transactionsWrapper.tinylock_asa,
                                     result.account
                                 )
                                     .pipe(
@@ -298,7 +346,7 @@ export class Tinylocker {
 
                                                 const amount = BigInt(assets[0]["amount"]);
                                                 if (amount <= 0) {
-                                                    return of(result);
+                                                    return of(null);
                                                 }
 
                                                 const timeEntry = localStateArray[0]["key-value"][0];
@@ -333,7 +381,7 @@ export class Tinylocker {
                                         ),
                                         catchError(
                                             (error: any) => {
-                                                console.debug("Error: ", error.message, " Entry: ", result, " TX: ", transaction);
+                                                this.log("Error: ", error.message, " Entry: ", result, " TX: ", transaction);
                                                 return of(null);
                                             }
                                         )

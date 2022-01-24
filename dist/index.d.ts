@@ -1,5 +1,5 @@
 import { Algodv2, Indexer } from "algosdk";
-import { AlgodTokenHeader, CustomTokenHeader, IndexerTokenHeader } from "algosdk/dist/types/src/client/client";
+import { AlgodTokenHeader, IndexerTokenHeader } from "algosdk/dist/types/src/client/urlTokenBaseHTTPClient";
 import { Asset } from "algosdk/dist/types/src/client/v2/algod/models/types";
 import { Tinylock } from "./tinylock_signature";
 import { Tinyman } from "./tinyman_signature";
@@ -10,14 +10,15 @@ export interface TinylockerConfig {
     environment?: keyof typeof Environment;
     client?: Algodv2;
     indexer?: Indexer;
-    clientToken?: string | AlgodTokenHeader | CustomTokenHeader;
-    indexerToken?: string | IndexerTokenHeader | CustomTokenHeader;
+    clientToken?: string | AlgodTokenHeader;
+    indexerToken?: string | IndexerTokenHeader;
     clientBase?: string;
     clientPort?: string | number;
     indexerBase?: string;
     indexerPort?: string | number;
     tinymanAppId?: number;
     tinylockAppId?: number;
+    log?: boolean;
 }
 export interface SearchResultEntry {
     unlocked: boolean;
@@ -41,6 +42,7 @@ export declare class Tinylocker {
     tinymanAppId: number;
     tinylockAppId: number;
     tinylockAsaId: number;
+    logEnabled: boolean;
     enableAPICallRateLimit: boolean;
     rateLimiter: {
         maxCallsPerSecond: number;
@@ -60,11 +62,13 @@ export declare class Tinylocker {
     getAccountInfoByAddress: (address: string) => import("rxjs").Observable<Record<string, any>>;
     private findTinylockAppTransactions;
     private findTinylockMigrationTransactions;
+    private log;
     fetchAssetInfoById: (asaID: number) => import("rxjs").Observable<Record<string, any>>;
     assets: {
         [key: number]: Asset;
     };
     getAssetInfoById: (asaId: number) => import("rxjs").Observable<Asset>;
+    private wrapFindTinylockAppTransactions;
     searchToken: (asa: number, issuedLiquidityTokens?: bigint | undefined) => import("rxjs").Observable<(SearchResultEntry | null)[]>;
     searchPoolAsa: (asa1: number, asa2: number) => import("rxjs").Observable<{
         poolAccount: any;

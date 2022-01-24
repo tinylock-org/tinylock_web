@@ -15,22 +15,22 @@ const TEMPLATE_OBJECT = [
         "type": "int",
         "index": 5,
         "length": 10
-    },
-    {
+      },
+      {
         "name": "TMPL_ASSET_ID_1",
         "type": "int",
-        "index": 17,
+        "index": 15,
         "length": 10
-    },
-    {
+      },
+      {
         "name": "TMPL_VALIDATOR_APP_ID",
         "type": "int",
-        "index": 75,
+        "index": 74,
         "length": 10
-    }
+      }
 ];
 
-const BYTE_CODE = "BCAIAQCBgICAgICAgPABAwSAgICAgICAgPABBQYhBSQNRDEJMgMSRDEVMgMSRDEgMgMSRDIEIg1EMwEAMQASRDMBECEHEkQzARiBgoCAgICAgIDwARJEMwEZIhIzARslEhA3ARoAgAlib290c3RyYXASEEAAXDMBGSMSRDMBG4ECEjcBGgCABHN3YXASEEACEzMBGyISRDcBGgCABG1pbnQSQAE5NwEaAIAEYnVybhJAAYM3ARoAgAZyZWRlZW0SQAIzNwEaAIAEZmVlcxJAAlAAIQYhBCQjEk0yBBJENwEaARchBRI3ARoCFyQSEEQzAgAxABJEMwIQJRJEMwIhIxJEMwIiIxwSRDMCIyEHEkQzAiQjEkQzAiWAB1RNMVBPT0wSRDMCJlEADYANVGlueW1hbiBQb29sIBJEMwIngBNodHRwczovL3RpbnltYW4ub3JnEkQzAikyAxJEMwIqMgMSRDMCKzIDEkQzAiwyAxJEMwMAMQASRDMDECEEEkQzAxEhBRJEMwMUMQASRDMDEiMSRCQjE0AAEDMBATMCAQgzAwEINQFCAYkzBAAxABJEMwQQIQQSRDMEESQSRDMEFDEAEkQzBBIjEkQzAQEzAgEIMwMBCDMEAQg1AUIBVDIEIQYSRDcBHAExABNENwEcATMEFBJEMwIAMQATRDMCFDEAEkQzAwAzAgASRDMDFDMDBzMDECISTTEAEkQzBAAxABJEMwQUMwIAEkQzAQEzBAEINQFCAPwyBCEGEkQ3ARwBMQATRDcBHAEzAhQSRDMDFDMDBzMDECISTTcBHAESRDMCADEAEkQzAhQzBAASRDMDADEAEkQzAxQzAwczAxAiEk0zBAASRDMEADEAE0QzBBQxABJEMwEBMwIBCDMDAQg1AUIAjjIEIQQSRDcBHAExABNEMwIANwEcARJEMwIAMQATRDMDADEAEkQzAhQzAgczAhAiEk0xABJEMwMUMwMHMwMQIhJNMwIAEkQzAQEzAwEINQFCADwyBCUSRDcBHAExABNEMwIUMwIHMwIQIhJNNwEcARJEMwEBMwIBCDUBQgARMgQlEkQzAQEzAgEINQFCAAAzAAAxABNEMwAHMQASRDMACDQBD0M=";
+const BYTE_CODE = "BCAIAQCBgICAgICAgPABgICAgICAgIDwAQMEBQYlJA1EMQkyAxJEMRUyAxJEMSAyAxJEMgQiDUQzAQAxABJEMwEQIQcSRDMBGIGCgICAgICAgPABEkQzARkiEjMBGyEEEhA3ARoAgAlib290c3RyYXASEEAAXDMBGSMSRDMBG4ECEjcBGgCABHN3YXASEEACOzMBGyISRDcBGgCABG1pbnQSQAE7NwEaAIAEYnVybhJAAZg3ARoAgAZyZWRlZW0SQAJbNwEaAIAEZmVlcxJAAnkAIQYhBSQjEk0yBBJENwEaARclEjcBGgIXJBIQRDMCADEAEkQzAhAhBBJEMwIhIxJEMwIiIxwSRDMCIyEHEkQzAiQjEkQzAiWACFRNUE9PTDExEkQzAiZRAA+AD1RpbnltYW5Qb29sMS4xIBJEMwIngBNodHRwczovL3RpbnltYW4ub3JnEkQzAikyAxJEMwIqMgMSRDMCKzIDEkQzAiwyAxJEMwMAMQASRDMDECEFEkQzAxElEkQzAxQxABJEMwMSIxJEJCMTQAAQMwEBMwIBCDMDAQg1AUIBsTMEADEAEkQzBBAhBRJEMwQRJBJEMwQUMQASRDMEEiMSRDMBATMCAQgzAwEIMwQBCDUBQgF8MgQhBhJENwEcATEAE0Q3ARwBMwQUEkQzAgAxABNEMwIUMQASRDMDADMCABJEMwIRJRJEMwMUMwMHMwMQIhJNMQASRDMDESMzAxAiEk0kEkQzBAAxABJEMwQUMwIAEkQzAQEzBAEINQFCAREyBCEGEkQ3ARwBMQATRDcBHAEzAhQSRDMDFDMDBzMDECISTTcBHAESRDMCADEAEkQzAhQzBAASRDMCESUSRDMDADEAEkQzAxQzAwczAxAiEk0zBAASRDMDESMzAxAiEk0kEkQzBAAxABNEMwQUMQASRDMBATMCAQgzAwEINQFCAJAyBCEFEkQ3ARwBMQATRDMCADcBHAESRDMCADEAE0QzAwAxABJEMwIUMwIHMwIQIhJNMQASRDMDFDMDBzMDECISTTMCABJEMwEBMwMBCDUBQgA+MgQhBBJENwEcATEAE0QzAhQzAgczAhAiEk03ARwBEkQzAQEzAgEINQFCABIyBCEEEkQzAQEzAgEINQFCAAAzAAAxABNEMwAHMQASRDMACDQBD0M=";
 
 const sliceInsert = (uint8arr: Uint8Array, start: number, end: number, toInsert: any[]) => {
     const arrCopy = [...Array.from(uint8arr)]
@@ -63,19 +63,19 @@ export class Tinyman {
             TMPL_ASSET_ID_2 = tmp;
         }
 
-        console.log("Generating Tinyman V1 Pool Signature with: ", TMPL_ASSET_ID_1, TMPL_ASSET_ID_2, this.tinymanValidatorAppId);
+        console.debug("Generating Tinyman V1.1 Pool Signature with: ", TMPL_ASSET_ID_1, TMPL_ASSET_ID_2, this.tinymanValidatorAppId);
 
         const valueLookUpObject: any = {
             "TMPL_ASSET_ID_1": TMPL_ASSET_ID_1,
             "TMPL_ASSET_ID_2": TMPL_ASSET_ID_2,
             "TMPL_VALIDATOR_APP_ID": this.tinymanValidatorAppId
-          };
+        };
 
         let template_bytes: any = Buffer.from(BYTE_CODE, "base64");
 
         let offset = 0;
 
-          for(let templateData of TEMPLATE_OBJECT){
+        for (let templateData of TEMPLATE_OBJECT) {
             const value = valueLookUpObject[templateData.name] as number;
 
             const start = templateData.index - offset;
@@ -88,14 +88,13 @@ export class Tinyman {
             offset += diff;
 
             template_bytes = sliceInsert(template_bytes, start, end, Array.from(encodedValue));
-          }
+        }
 
-          const signature = new LogicSigAccount(template_bytes);
+        const signature = new LogicSigAccount(template_bytes);
 
-          console.log("Generated Tinyman V1 Pool Signature address: ", signature.address());
-          
-          return signature;
+        console.debug("Generated Tinyman V1.1 Pool Signature address: ", signature.address());
+
+        return signature;
     }
 
-    
 }

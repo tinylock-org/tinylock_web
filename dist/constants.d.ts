@@ -2,17 +2,39 @@ export declare enum Environment {
     MainNet = "MainNet",
     TestNet = "TestNet"
 }
+export declare enum TinylockVersion {
+    V1 = 0,
+    V1_1 = 1
+}
 export declare const Tinyman_App_Id: {
-    TestNet: number;
-    MainNet: number;
+    0: {
+        TestNet: number;
+        MainNet: number;
+    };
+    1: {
+        TestNet: number;
+        MainNet: number;
+    };
 };
 export declare const Tinylock_App_Id: {
-    TestNet: number;
-    MainNet: number;
+    0: {
+        TestNet: number;
+        MainNet: number;
+    };
+    1: {
+        TestNet: number;
+        MainNet: number;
+    };
 };
 export declare const Tinylock_Asa_Id: {
-    TestNet: number;
-    MainNet: number;
+    0: {
+        TestNet: number;
+        MainNet: number;
+    };
+    1: {
+        TestNet: number;
+        MainNet: number;
+    };
 };
 export declare const algoExplorerPort = 443;
 export declare const algoExplorerClientUrl: {
